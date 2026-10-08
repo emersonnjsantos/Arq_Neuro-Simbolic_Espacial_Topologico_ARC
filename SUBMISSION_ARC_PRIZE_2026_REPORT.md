@@ -48,7 +48,7 @@ T-NSE embeds these exact priors into its state representation, reducing search f
                                            v
 +---------------------------------------------------------------------------------------+
 |  MODULE 1: PERCEPTUAL DECOMPOSITION (ARCObjectExtractor)                              |
-|  * 4-Connected Component Labeling (cv2.connectedComponentsWithStats)                  |
+|  * Connected Components, configurable 4- or 8-connectivity (OpenCV / NumPy fallback)  |
 |  * Background Segregation (Color 0 / Canvas Mode)                                     |
 |  * Extract: Binary Mask, Bounding Box (x,y,w,h), Centroid (cx,cy), Mass (Area)        |
 +---------------------------------------------------------------------------------------+
@@ -70,7 +70,7 @@ T-NSE embeds these exact priors into its state representation, reducing search f
                                            v
 +---------------------------------------------------------------------------------------+
 |  MODULE 4: SYMBOLIC DSL ENGINE & VERIFICATION (ARCSymbolicEngine)                     |
-|  * Program Primitives: Recolor, Translate, Reflect, Scale, FillCavity                |
+|  * Primitives: Rotate, Reflect, FillHoles, Recolor, Translate, Upscale, FractalTile   |
 |  * Multi-example Consistency Test: f(Input_k) == Output_k                             |
 |  * Emit verified program P* -> Apply deterministically to Test Grid                   |
 +---------------------------------------------------------------------------------------+
@@ -86,12 +86,7 @@ where:
 * $A_i = \sum \mathcal{M}_i$ is the discrete mass (pixel count);
 * $\mathbf{c}_i = (\bar{x}_i, \bar{y}_i)$ is the spatial centroid.
 
-Using 4-connectivity discrete topology, connected regions are extracted without edge artifacts:
-```python
-num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-    mask, connectivity=4
-)
-```
+Connectivity is a parameter, `ARCObjectExtractor(grid, connectivity=4 | 8)`. With 4-connectivity (ARC's orthogonal convention) diagonal pixels form separate objects; with 8-connectivity they merge, so the solver can test both topologies per task. Labeling uses OpenCV when available and an equivalent pure-NumPy BFS otherwise.
 
 ### 2.2 Topological Scene Graph (TSG)
 The scene is represented as an attributed relational graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where vertices $\mathcal{V} = \mathcal{O}$ denote isolated objects and directed edges $e_{ij} \in \mathcal{E}$ capture topological relationships:
@@ -102,10 +97,12 @@ The scene is represented as an attributed relational graph $\mathcal{G} = (\math
 
 ### 2.3 The Domain-Specific Language (DSL)
 T-NSE operates over a compact, strongly-typed topological DSL:
-1. **Geometric Morphisms:** $\text{Translate}(o_i, \Delta x, \Delta y)$, $\text{Rotate90}(o_i, k)$, $\text{Reflect}(o_i, \text{axis})$;
-2. **Topological Set Operations:** $\text{FillCavities}(o_i)$, $\text{ExtractBoundaries}(o_i)$, $\text{CropToMask}(o_i)$;
-3. **Color Permutations:** $\text{Recolor}(o_i, c_{\text{target}})$, $\text{MapColorByProperty}(o_i, \text{criterion})$;
-4. **Structural Composition:** $\text{Tile}(o_i, N_x, N_y)$, $\text{Align}(o_i, \text{anchor})$.
+1. **Affine morphisms:** $\text{Rotate}(90/180/270)$, $\text{Reflect}(h/v)$, $\text{Transpose}$, $\text{Translate}(\Delta x, \Delta y)$;
+2. **Topological operations:** $\text{FillHoles}(c)$ (flood-fill of enclosed cavities from the border);
+3. **Color operations:** $\text{Recolor}(c_{\text{target}})$;
+4. **Structural composition:** $\text{Upscale}(k)$, $\text{FractalSelfTile}$.
+
+Programs are compositions of up to two primitives (~60 primitives, shortest-first).
 
 ### 2.4 Program Induction & Deterministic Verification
 Search operates via bidirectional hypothesis generation. For training exemplars $(I_k, O_k)_{k=1}^K$:
@@ -141,9 +138,11 @@ Unlike continuous neural networks where spatial precision degrades across layers
 
 In our prototype implementation (`Neuro-Simbolic_Espacial_Topologico_ARC.ipynb`), T-NSE was evaluated against official ARC benchmarks (including canonical task `007bbfb7.json`):
 
-1. **Perceptual Object Recovery:** The extractor isolates disconnected and enclosed objects with 100% precision, determining bounding boxes and mass metrics instantly.
-2. **Hypothesis Resolution Speed:** Pruning candidate transformations down to verified topological primitives allows the solver to find the exact rule in $< 15\text{ ms}$.
-3. **Canvas Scalability:** The pipeline natively accommodates arbitrary grid resolutions ($H, W \le 30$) while preserving categorical color palettes.
+1. **Task `007bbfb7` (official ARC training set):** the engine synthesizes `fractal_self_tile` from the 5 training pairs ($Loss = 0$ on all) after testing 7 candidates, and predicts the hidden test output exactly.
+2. **Synthetic multi-pair tasks:** rotation, mirroring, hole filling, recoloring and the depth-2 composition `rot90 -> flip_h` are all recovered (1 to 79 candidates).
+3. **Offline robustness:** the task loader falls back from a local Kaggle input, to GitHub, to an embedded copy, so the notebook runs with Internet disabled.
+
+**Scope and limitations.** This is a reference prototype: the DSL is small, search is brute-force at depth <= 2, and the neural pruning module (Module 3) and the GNN roadmap below are *not yet implemented*. We do not claim a leaderboard score here; the Accuracy criterion should be read against the linked submission ID.
 
 ---
 
@@ -168,4 +167,4 @@ The Topological Neuro-Symbolic Engine demonstrates that genuine artificial intel
 T-NSE offers an efficient, mathematically grounded, and scalable path toward mastering the ARC Prize 2026.
 
 ---
-*Official Paper Track Submission — Word Count: ~1,150 words (Strictly compliant with Kaggle's 1,500-word limit).*
+*Official Paper Track Submission — within Kaggle's 1,500-word limit.*

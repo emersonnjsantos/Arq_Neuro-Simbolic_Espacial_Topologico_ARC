@@ -1,0 +1,97 @@
+Neuro-Symbolic Architecture for Topological Spatial Reasoning in ARC
+
+Separating Visual Perception from Symbolic Program Search for Few-Shot Spatial Tasks
+
+Author: Emerson Noe Jose dos Santos
+Track: ARC Prize 2026 - Paper Track (ARC-AGI-2)
+Notebook: Neuro-Simbolic_Espacial_Topologico_ARC.ipynb
+Repository: https://github.com/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC
+Submission ID: Pending (Notebook in preparation for ARC-AGI-2 leaderboard)
+
+
+1. Introduction
+
+The Abstraction and Reasoning Corpus (ARC) exposes a limitation of dominant AI paradigms: difficulty generalizing to tasks unseen during training. Deep learning and large language models are strong at statistical pattern recognition, but ARC asks for something different: inferring a spatial or topological rule from very few examples. Treating a grid as a sequence of text tokens discards its two-dimensional neighborhood structure, and models often fail on predicates such as "is inside", "touches" or "is the mirror of".
+
+This work explores an alternative that makes the reasoning explicit and verifiable. Instead of black-box inference, the pipeline has two independent stages: perception and reasoning. Perception applies classical computer vision operations (color masks and connected components) to turn a pixel grid into an inventory of objects. Reasoning is a symbolic search over a small domain-specific language (DSL) that operates on grids and on the properties of those objects. A candidate rule is accepted only if it reproduces every training output exactly.
+
+The expected benefit of this split is a smaller search space. The solver does not have to rediscover what an object, a hole or an adjacency is on each task, because the perception stage provides them. The solver can spend its search budget on the transformation itself.
+
+This is a reference prototype. It is small, it is brute-force at limited depth, and we state its scope and limits explicitly in Sections 5 and 6.
+
+
+2. Theoretical Foundation
+
+The design follows the Core Knowledge priors discussed by Chollet (2019) and Spelke: objectness (contiguous same-color pixels behave as one entity), spatial relations (adjacency, containment) and simple geometry (translation, reflection, rotation). Humans solving ARC do not estimate the probability of a blue pixel next to a red one; they perceive "a blue square" and "a red line". The architecture mirrors this by decoupling feature extraction from logical inference.
+
+Mask isolation and connected components. The input grid is decomposed into one boolean mask per color (integers 0 to 9, with 0 treated as background). Connected-component labeling groups the pixels of each mask into objects. Connectivity is a parameter: with 4-connectivity (orthogonal neighbors only) diagonal pixels form separate objects, and with 8-connectivity they merge. The correct choice depends on the task, so both topologies can be tested.
+
+Relational scene graph. Objects become the nodes of a Topological Scene Graph (TSG). Typed edges record adjacency (masks touching orthogonally) and containment (one object lying entirely inside an enclosed cavity of another), together with the relative offset between centroids. Holes are computed topologically: a background cell belongs to a hole if it cannot reach the grid border through non-object cells. Moving from raw pixels to objects and relations makes the rules the solver searches for simpler to express. We do not claim invariance to arbitrary noise, scale or rotation; the symbolic stage is exact, so input noise would need to be handled by the perception stage and is not addressed here.
+
+Verification as a stopping criterion. A rule is a program: a composition of DSL primitives. Its loss on a task is the number of mismatching cells summed over all training pairs. The search stops at the first, and therefore shortest, program with zero loss. Requiring zero loss on all pairs simultaneously guards against fitting a single example.
+
+
+3. Solution Architecture
+
+The system is written in Python using NumPy and, when available, OpenCV; if OpenCV is missing, an equivalent pure-NumPy labeling routine is used. It runs on CPU and needs no training.
+
+3.1 Perceptor (ARCObjectExtractor)
+
+The perceptor converts the input grid to a NumPy array, creates a mask per non-background color and labels connected components with the chosen connectivity (4 or 8). Each object is stored with:
+- color;
+- bounding box (x, y, width, height);
+- area (pixel count);
+- centroid (center of mass);
+- local mask (the exact shape of the object).
+
+Perimeter and solidity (object area divided by bounding-box area) are natural next attributes but are not implemented in the current prototype.
+
+3.2 Scene graph (build_scene_graph)
+
+For every object the TSG stores its color, area, bounding box and number of hole cells. Edges of type "adjacent" and "contains" store the centroid offset between the two objects. In the current prototype the graph is built and inspected, but it is not yet used to prune the search; that is future work.
+
+3.3 Symbolic engine (ARCSymbolicEngine)
+
+The DSL contains grid-to-grid primitives:
+- affine: rotations by 90, 180 and 270 degrees, horizontal and vertical reflection, transpose;
+- translation by (dx, dy) in the range -3 to 3, without wrap-around;
+- topological: flood-fill of enclosed holes with a chosen color;
+- color: recolor all non-background cells to a chosen color;
+- structural: integer upscaling (x2, x3) and fractal self-tiling (each non-background cell is replaced by a copy of the whole grid).
+
+The synthesizer enumerates compositions of one and two primitives, shortest first, and returns the first program with zero loss on all training pairs. That program is then applied to the test input to produce the prediction. Object-level rules from the first prototype (recolor all objects, translate a single object) are kept as additional primitives. Boolean mask operations (intersection, union, subtraction) and rules conditioned on object properties are not implemented yet.
+
+3.4 Offline-safe task loading
+
+Kaggle evaluation runs may have no Internet access. The task loader therefore tries a local file under /kaggle/input first, then a download with a timeout, and finally a copy of the task embedded in the notebook. The notebook was tested with the network disabled.
+
+
+4. Generalization Beyond the Competition
+
+The decoupling of perception and symbolic reasoning is not specific to ARC grids. In domains where data is scarce, explicit object extraction plus a small set of verifiable rules can be an alternative to training a large model. Plausible applications are:
+- robotics and navigation, where obstacles are extracted by a vision stage and spatial rules are checked symbolically;
+- structural inspection and industrial monitoring, where defects can be described by geometry and relative position of parts;
+- medical image analysis for rare structural anomalies, where topological descriptors could complement learned models.
+
+These are research directions, not results of this work. Real images require handling noise, illumination and non-discrete values, which the current grid-based perceptor does not do.
+
+
+5. Performance and Results
+
+Verified results from the public notebook:
+- Official ARC training task 007bbfb7: the engine synthesized fractal_self_tile from the five training pairs (zero loss on all) after testing 7 candidates, and its prediction for the test input matched the expected output exactly.
+- Synthetic multi-pair tasks: rotation by 90 degrees, horizontal mirroring, hole filling, recoloring, and the two-step program "rotate 90 then flip horizontally" were each recovered, using between 1 and 79 candidate programs.
+- Offline robustness: the full pipeline runs unchanged when the download fails, using the embedded task copy.
+
+Leaderboard performance: The notebook is designed as a conceptual prototype to validate the neuro-symbolic approach. It is being prepared for a future submission to the ARC-AGI-2 competition to establish a baseline score. As a prototype with a small DSL and depth-2 search, it is expected to solve a subset of the tasks. We make no claim about leaderboard accuracy before an official score is obtained.
+
+Failure analysis (expected, to be confirmed on the leaderboard run). The engine cannot represent tasks that require counting or arithmetic, conditional rules over object properties, rules that depend on several objects at once, or non-rigid changes in which objects fragment or grow. For these tasks no program in the DSL reaches zero loss and the solver returns no answer. Increasing the search depth or the number of primitives grows the search space exponentially, which is the main limit on the current approach.
+
+
+6. Conclusion and Future Work
+
+Separating perception from rule synthesis gives a transparent and verifiable pipeline: every prediction comes with the program that produced it, and that program was checked on all training pairs. The prototype shows that this works on simple spatial rules such as reflection, rotation, hole filling and fractal replication.
+
+The "neuro" part of a full neuro-symbolic system is future work. Planned steps are: use the scene-graph differences between input and output to select which DSL primitives to try (pruning), learn a ranking model over programs, add object-level and property-conditioned primitives and boolean mask operations, and extend the perceptor with perimeter and solidity. These changes address the main current limit, the exponential growth of the search space.
+
+The architecture is offered as a transparent baseline for studying how much of ARC can be solved by explicit object perception and verified program search, and as a base on which learned components can be added.
