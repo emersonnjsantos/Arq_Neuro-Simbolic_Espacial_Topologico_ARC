@@ -62,8 +62,8 @@ T-NSE embeds these exact priors into its state representation, reducing search f
                                            |
                                            v
 +---------------------------------------------------------------------------------------+
-|  MODULE 3: NEURAL-HEURISTIC HYPOTHESIS PRUNER                                         |
-|  * Object-Pair Delta Analysis: Detect Color Shifts, Translations, Replications        |
+|  MODULE 3: HEURISTIC HYPOTHESIS PRUNER                                                |
+|  * Rule-Based Delta Analysis: Detect Shape Shifts, Color Shifts, Scaling              |
 |  * Dynamic DSL Sub-space Selection (Geometry vs. Palette vs. Topology)                |
 +---------------------------------------------------------------------------------------+
                                            |
@@ -142,7 +142,7 @@ In our prototype implementation (`Neuro-Simbolic_Espacial_Topologico_ARC.ipynb`)
 2. **Synthetic multi-pair tasks:** rotation, mirroring, hole filling, recoloring and the depth-2 composition `rot90 -> flip_h` are all recovered (1 to 79 candidates).
 3. **Offline robustness:** the task loader falls back from a local Kaggle input, to GitHub, to an embedded copy, so the notebook runs with Internet disabled.
 
-**Scope and limitations.** This is a reference prototype: the DSL is small, search is brute-force at depth <= 2, and the neural pruning module (Module 3) and the GNN roadmap below are *not yet implemented*. We do not claim a leaderboard score here; the Accuracy criterion should be read against the linked submission ID.
+**Scope and limitations.** This is a reference prototype: the DSL is small (75 primitives), and search is limited to depth <= 2 using a heuristic, rule-based pruning module (Module 3) and a strict time budget to respect Kaggle's limits. The *neural* components (like the GNN roadmap below) are planned for future work. We do not claim a leaderboard score here; the Accuracy criterion should be read against the linked submission ID.
 
 ---
 

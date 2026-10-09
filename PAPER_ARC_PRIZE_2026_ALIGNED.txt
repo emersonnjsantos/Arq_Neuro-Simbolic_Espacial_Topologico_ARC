@@ -59,7 +59,7 @@ The DSL contains grid-to-grid primitives:
 - color: recolor all non-background cells to a chosen color;
 - structural: integer upscaling (x2, x3) and fractal self-tiling (each non-background cell is replaced by a copy of the whole grid).
 
-The synthesizer enumerates compositions of one and two primitives, shortest first, and returns the first program with zero loss on all training pairs. That program is then applied to the test input to produce the prediction. Object-level rules from the first prototype (recolor all objects, translate a single object) are kept as additional primitives. Boolean mask operations (intersection, union, subtraction) and rules conditioned on object properties are not implemented yet.
+The search is guided by a heuristic rule-based pruning module that analyzes input/output shape and color differences to dynamically reduce the DSL space before synthesis. The synthesizer then enumerates compositions of one and two primitives from the pruned space, shortest first, and returns the first program with zero loss on all training pairs. That program is then applied to the test input to produce the prediction. Object-level rules from the first prototype (recolor all objects, translate a single object) are kept as additional primitives. Boolean mask operations (intersection, union, subtraction) and rules conditioned on object properties are not implemented yet.
 
 3.4 Offline-safe task loading
 
@@ -92,6 +92,6 @@ Failure analysis (expected, to be confirmed on the leaderboard run). The engine 
 
 Separating perception from rule synthesis gives a transparent and verifiable pipeline: every prediction comes with the program that produced it, and that program was checked on all training pairs. The prototype shows that this works on simple spatial rules such as reflection, rotation, hole filling and fractal replication.
 
-The "neuro" part of a full neuro-symbolic system is future work. Planned steps are: use the scene-graph differences between input and output to select which DSL primitives to try (pruning), learn a ranking model over programs, add object-level and property-conditioned primitives and boolean mask operations, and extend the perceptor with perimeter and solidity. These changes address the main current limit, the exponential growth of the search space.
+The "neuro" part of a full neuro-symbolic system is future work. While the current system uses a deterministic heuristic pruner to limit search space growth based on global shape and color properties, planned steps include: using deep scene-graph differences (TSG-delta pruning) to select primitives, learning a Graph Neural Network ranking model over programs, adding property-conditioned primitives, and extending the perceptor with perimeter and solidity. These changes will further address the main current limit, the exponential growth of the search space on complex tasks.
 
 The architecture is offered as a transparent baseline for studying how much of ARC can be solved by explicit object perception and verified program search, and as a base on which learned components can be added.
