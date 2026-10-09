@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧠 Topological Neuro-Symbolic Engine (T-NSE)
+# Topological Neuro-Symbolic Engine (T-NSE)
 
 ### Object-Centric Spatial Induction for the Abstraction and Reasoning Corpus
 
@@ -9,8 +9,6 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC/blob/main/Neuro-Simbolic_Espacial_Topologico_ARC.ipynb)
 [![Kaggle](https://img.shields.io/badge/Kaggle-ARC%20Prize%202026-20BEFF?logo=kaggle&logoColor=white)](https://www.kaggle.com/competitions/arc-prize-2026-arc-agi-2)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-core-013243?logo=numpy&logoColor=white)
-![OpenCV](https://img.shields.io/badge/OpenCV-optional-5C3EE8?logo=opencv&logoColor=white)
 ![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey)
 
 <img src="cover_image_arc_prize_2026.jpg" alt="T-NSE — ARC Prize 2026 cover" width="85%"/>
@@ -21,25 +19,25 @@
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-1. [About the Competition](#-about-the-competition)
-2. [The Core Problem](#-the-core-problem)
-3. [Our Approach: T-NSE](#-our-approach-t-nse)
-4. [System Architecture](#️-system-architecture)
-5. [Module Deep-Dive](#-module-deep-dive)
-6. [Search Complexity](#-search-complexity)
-7. [Empirical Results](#-empirical-results)
-8. [Kaggle Submission Pipeline](#-kaggle-submission-pipeline)
-9. [Quick Start](#-quick-start)
-10. [Repository Structure](#-repository-structure)
-11. [Limitations (Honest Scope)](#️-limitations-honest-scope)
-12. [Roadmap](#️-roadmap)
-13. [Citation & License](#-citation--license)
+1. [About the Competition](#about-the-competition)
+2. [The Core Problem](#the-core-problem)
+3. [Our Approach: T-NSE](#our-approach-t-nse)
+4. [System Architecture](#system-architecture)
+5. [Module Deep-Dive](#module-deep-dive)
+6. [Search Complexity](#search-complexity)
+7. [Empirical Results](#empirical-results)
+8. [Kaggle Submission Pipeline](#kaggle-submission-pipeline)
+9. [Quick Start](#quick-start)
+10. [Repository Structure](#repository-structure)
+11. [Limitations (Honest Scope)](#limitations-honest-scope)
+12. [Roadmap](#roadmap)
+13. [Citation & License](#citation--license)
 
 ---
 
-## 🏆 About the Competition
+## About the Competition
 
 The **ARC Prize 2026** is a Kaggle competition built on **ARC-AGI-2**, the second generation of the *Abstraction and Reasoning Corpus* introduced by François Chollet in *On the Measure of Intelligence* (2019).
 
@@ -80,7 +78,7 @@ This repository is our Paper Track entry.
 
 ---
 
-## 🧩 The Core Problem
+## The Core Problem
 
 Current AI paradigms fail on ARC for opposite reasons:
 
@@ -91,15 +89,15 @@ Current AI paradigms fail on ARC for opposite reasons:
 
 Humans, by contrast, solve most ARC tasks in seconds. They rely on **Core Knowledge priors** (Spelke; Chollet):
 
-- 🧱 **Objectness & cohesion**: contiguous same-colored pixels move together as one entity.
-- 🕳️ **Topological invariants**: connectivity, holes and containment survive translation and recoloring.
-- 🎯 **Goal-directed morphisms**: outputs are structured transformations of identified objects.
+- **Objectness & cohesion**: contiguous same-colored pixels move together as one entity.
+- **Topological invariants**: connectivity, holes and containment survive translation and recoloring.
+- **Goal-directed morphisms**: outputs are structured transformations of identified objects.
 
 **T-NSE encodes these priors directly into its representation**, so the search runs over *objects and relations* instead of raw pixels.
 
 ---
 
-## 💡 Our Approach: T-NSE
+## Our Approach: T-NSE
 
 T-NSE splits visual reasoning into three complementary stages:
 
@@ -111,11 +109,11 @@ The result is a solver that is **explainable** (it outputs an explicit program),
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
-    A["📥 Input Grid<br/>G ∈ {0..9}^(H×W)"] --> B
+    A["Input Grid<br/>G ∈ {0..9}^(H×W)"] --> B
 
     subgraph P1["Module 1 · Perception"]
         B["ARCObjectExtractor<br/>4- / 8-connected components"] --> B2["Objects: color, mask,<br/>bbox, area, centroid"]
@@ -135,15 +133,15 @@ flowchart TD
         F -- "no" --> E
     end
 
-    F -- "yes" --> G["✅ Verified program P*"]
-    G --> H["📤 Prediction = P*(test input)"]
+    F -- "yes" --> G["Verified program P*"]
+    G --> H["Prediction = P*(test input)"]
     F -- "search exhausted" --> I["Fallback: copy test input"]
     I --> H
 ```
 
 ---
 
-## 🔬 Module Deep-Dive
+## Module Deep-Dive
 
 ### Module 1 · Topological Perception (`ARCObjectExtractor`)
 
@@ -219,7 +217,7 @@ program, prediction = engine.solve(train_pairs, test_input, max_depth=2)
 
 ---
 
-## 📐 Search Complexity
+## Search Complexity
 
 | Depth | Candidates | Cumulative |
 |:---:|---:|---:|
@@ -231,17 +229,17 @@ Pixel space for a `30×30` grid has $10^{900}$ configurations. By working with o
 
 ---
 
-## 📊 Empirical Results
+## Empirical Results
 
 | Benchmark | Result |
 |---|---|
-| **Official ARC task `007bbfb7`** | Synthesizes `fractal_self_tile` from **5/5** training pairs (Loss = 0) after **7** candidates; the hidden test output is predicted **exactly** ✅ |
-| **Synthetic: rotate 90°** | Recovered at depth 1 ✅ |
-| **Synthetic: horizontal mirror** | Recovered at depth 1 ✅ |
-| **Synthetic: fill holes with 3** | Recovered at depth 1 ✅ |
-| **Synthetic: recolor to 5** | Recovered at depth 1 ✅ |
-| **Synthetic: `rot90 → flip_h`** | Recovered at depth 2 (composition) ✅ |
-| **Offline robustness** | Loader falls back from local Kaggle input → GitHub → embedded copy ✅ |
+| **Official ARC task `007bbfb7`** | Synthesizes `fractal_self_tile` from **5/5** training pairs (Loss = 0) after **7** candidates; the hidden test output is predicted **exactly** |
+| **Synthetic: rotate 90°** | Recovered at depth 1 |
+| **Synthetic: horizontal mirror** | Recovered at depth 1 |
+| **Synthetic: fill holes with 3** | Recovered at depth 1 |
+| **Synthetic: recolor to 5** | Recovered at depth 1 |
+| **Synthetic: `rot90 → flip_h`** | Recovered at depth 2 (composition) |
+| **Offline robustness** | Loader falls back from local Kaggle input → GitHub → embedded copy |
 
 > [!NOTE]
 > These results validate the *mechanism*. We do **not** claim a leaderboard score; the Accuracy criterion should be read against the linked Kaggle Submission ID.
@@ -257,7 +255,7 @@ Pixel space for a `30×30` grid has $10^{900}$ configurations. By working with o
 
 ---
 
-## 🚀 Kaggle Submission Pipeline
+## Kaggle Submission Pipeline
 
 **Module 5** of the notebook turns the engine into a valid ARC-AGI-2 submission:
 
@@ -287,16 +285,16 @@ Output format (one dict **per test input**, because some tasks have 2+ test inpu
 
 Built-in safety guarantees:
 
-- 🛡️ **Per-task `try/except`**: one failing task never breaks the whole file.
-- 📦 **Every task gets an entry**: a missing task ID would invalidate the submission.
-- 🌐 **No Internet required**: matches Kaggle's offline evaluation.
+- **Per-task `try/except`**: one failing task never breaks the whole file.
+- **Every task gets an entry**: a missing task ID would invalidate the submission.
+- **No Internet required**: matches Kaggle's offline evaluation.
 
 > [!IMPORTANT]
 > **Current submission setting: `max_depth=0`.** Brute-force search at depth 2 over ~240 hidden tasks exceeded Kaggle's runtime limit and caused a *Submission Scoring Error*. To obtain a valid Submission ID (required for Paper Track eligibility), the submission cell currently runs with `max_depth=0`. In this mode **no search is performed** and every attempt is the identity fallback. The full depth-2 engine is still demonstrated in Modules 3–4. Re-enabling `max_depth=1` (75 candidates per task) with a per-task time budget is the next step.
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Option A · Google Colab (zero setup)
 
@@ -327,7 +325,7 @@ jupyter notebook Neuro-Simbolic_Espacial_Topologico_ARC.ipynb
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 .
@@ -350,7 +348,7 @@ jupyter notebook Neuro-Simbolic_Espacial_Topologico_ARC.ipynb
 
 ---
 
-## ⚠️ Limitations (Honest Scope)
+## Limitations (Honest Scope)
 
 This is a **reference prototype**, not a leaderboard-optimized system:
 
@@ -358,11 +356,11 @@ This is a **reference prototype**, not a leaderboard-optimized system:
 - Search is **brute force**, limited to depth ≤ 2.
 - The **neural pruning module** described in the report is **not yet implemented**.
 - Both attempts are identical (single hypothesis); the second attempt is not yet used for a runner-up program.
-- The Kaggle submission currently runs with `max_depth=0` (see [Pipeline](#-kaggle-submission-pipeline)).
+- The Kaggle submission currently runs with `max_depth=0` (see [Pipeline](#kaggle-submission-pipeline)).
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] Object-centric perception with configurable connectivity
 - [x] Topological Scene Graph (adjacency, containment, offsets)
@@ -378,17 +376,17 @@ This is a **reference prototype**, not a leaderboard-optimized system:
 
 ---
 
-## 🌍 Beyond ARC
+## Beyond ARC
 
 T-NSE is a general recipe for **object-centric relational world modeling**:
 
-- 🤖 **Robotics**: synthesize manipulation sequences from visual demonstrations.
-- 📐 **CAD & floor-planning**: enforce containment, clearance and routing constraints.
-- 🧪 **Physical commonsense**: predict containment, support and trajectories.
+- **Robotics**: synthesize manipulation sequences from visual demonstrations.
+- **CAD & floor-planning**: enforce containment, clearance and routing constraints.
+- **Physical commonsense**: predict containment, support and trajectories.
 
 ---
 
-## 📚 Citation & License
+## Citation & License
 
 ```bibtex
 @misc{santos2026tnse,
@@ -413,6 +411,8 @@ Released under **[Creative Commons Attribution 4.0 (CC BY 4.0)](https://creative
 ---
 
 **Author:** Emerson Noé José dos Santos  
-*If this project helped you think about abstract reasoning, consider giving it a ⭐*
+*B.Sc. in Computer Science*  
+
+*If this project helped you think about abstract reasoning, consider giving it a star.*
 
 </div>
