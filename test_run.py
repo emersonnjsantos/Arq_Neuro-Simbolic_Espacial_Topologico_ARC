@@ -208,8 +208,9 @@ class ARCSymbolicEngine:
         for i, obj in enumerate(self.objects):
             if i == obj_index:
                 ys, xs = np.where(obj['mask'] > 0)
-                new_grid[np.clip(ys + dy, 0, self.grid_shape[0] - 1),
-                         np.clip(xs + dx, 0, self.grid_shape[1] - 1)] = obj['color']
+                ny, nx = ys + dy, xs + dx
+                ok = (ny >= 0) & (ny < self.grid_shape[0]) & (nx >= 0) & (nx < self.grid_shape[1])
+                new_grid[ny[ok], nx[ok]] = obj['color']
             else:
                 new_grid[obj['mask'] > 0] = obj['color']
         return new_grid
@@ -381,53 +382,59 @@ print("Synthesized programs:", progs)
 print("Test prediction correct:", bool(len(preds) > 0 and np.array_equal(preds[0], test_out)))
 
 import os
+import glob
 import json
-
-# Paths for Kaggle ARC-AGI-2 Environment
-KAGGLE_TEST_DIR = "/kaggle/input/arc-prize-2026-arc-agi-2/test/"
-KAGGLE_TEST_FILE = "/kaggle/input/arc-prize-2026-arc-agi-2/arc-agi_test_challenges.json"
 
 submission_dict = {}
 test_tasks = {}
 
-# 1. Load the test data
-if os.path.exists(KAGGLE_TEST_FILE):
-    with open(KAGGLE_TEST_FILE, 'r') as f:
+# 1. Busca dinâmica e robusta do arquivo de teste em qualquer pasta de /kaggle/input/
+possible_files = glob.glob("/kaggle/input/**/arc-agi_test_challenges.json", recursive=True)
+if not possible_files:
+    possible_files = glob.glob("/kaggle/input/**/*test*.json", recursive=True)
+
+if possible_files and os.path.exists(possible_files[0]):
+    print(f"[INFO] Carregando dados de teste de: {possible_files[0]}")
+    with open(possible_files[0], 'r') as f:
         test_tasks = json.load(f)
-elif os.path.exists(KAGGLE_TEST_DIR):
-    for f_name in os.listdir(KAGGLE_TEST_DIR):
+elif os.path.exists("/kaggle/input/arc-prize-2026-arc-agi-2/test/"):
+    test_dir = "/kaggle/input/arc-prize-2026-arc-agi-2/test/"
+    for f_name in os.listdir(test_dir):
         if f_name.endswith('.json'):
             task_id = f_name.split('.')[0]
-            with open(os.path.join(KAGGLE_TEST_DIR, f_name), 'r') as f:
+            with open(os.path.join(test_dir, f_name), 'r') as f:
                 test_tasks[task_id] = json.load(f)
 else:
     print("Kaggle test data not found. Falling back to the embedded task for demonstration.")
-    # Fallback to the task loaded in Module 4 for local validation
     try:
         test_tasks = {"007bbfb7": EMBEDDED_007BBFB7}
     except NameError:
-        print("Embedded task not found either.")
+        test_tasks = {}
+
+print(f"[INFO] Total de tarefas a processar: {len(test_tasks)}")
 
 # 2. Iterate and generate predictions
-for task_id, task_data in test_tasks.items():
-    if 'train' in task_data and 'test' in task_data:
-        # Format train pairs as expected by ARCSymbolicEngine (list of (input, output) tuples)
-        train_pairs = [(p['input'], p['output']) for p in task_data['train']]
-        test_pairs = task_data['test']
+engine = ARCSymbolicEngine()
 
-        # Instantiate engine
-        engine = ARCSymbolicEngine()
+for task_id, task_data in test_tasks.items():
+    if 'test' in task_data:
+        test_pairs = task_data['test']
+        train_pairs = [(p['input'], p['output']) for p in task_data.get('train', [])]
+
+        progs = []
+        if len(train_pairs) > 0:
+            try:
+                # max_depth=1 com timeout de 1.5s garante execução rápida sem timeout no Kaggle
+                progs = engine.synthesize(train_pairs, max_depth=1, max_time=1.5, max_progs=2, verbose=False)
+            except Exception as e:
+                print(f"[{task_id}] solver error: {e}")
+                progs = []
 
         # One entry per test input (a few tasks have 2 or more test inputs)
         task_entries = []
         for t_pair in test_pairs:
             test_input = t_pair['input']
-            try:
-                # Depth 2 is now safe with pruning and a 4.0s timeout per task
-                progs, preds = engine.solve(train_pairs, test_input, max_depth=2, max_time=4.0)
-            except Exception as e:
-                print(f"[{task_id}] solver error: {e}")
-                preds = []
+            preds = [engine._run(p, test_input) for p in progs]
 
             attempt_1 = attempt_2 = np.array(test_input).tolist()
             if len(preds) > 0:
@@ -448,3 +455,4 @@ with open(submission_path, 'w') as f:
     json.dump(submission_dict, f)
 
 print(f"Submission generated at {os.path.abspath(submission_path)} with {len(submission_dict)} tasks.")
+
