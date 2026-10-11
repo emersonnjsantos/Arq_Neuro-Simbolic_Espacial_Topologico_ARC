@@ -384,6 +384,7 @@ print("Test prediction correct:", bool(len(preds) > 0 and np.array_equal(preds[0
 import os
 import glob
 import json
+import numpy as np
 
 submission_dict = {}
 test_tasks = {}
