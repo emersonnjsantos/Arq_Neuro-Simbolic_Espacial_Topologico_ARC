@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Topological Neuro-Symbolic Engine (T-NSE) — Technical Paper</title>
+<style>
+    @media print {
+        @page {
+            margin: 20mm;
+            size: A4;
+        }
+        body {
+            font-size: 10.5pt;
+            line-height: 1.5;
+            color: #000;
+        }
+        h1, h2, h3 {
+            page-break-after: avoid;
+        }
+        pre, blockquote, table {
+            page-break-inside: avoid;
+        }
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: #1f2328;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 25px;
+        line-height: 1.6;
+        background-color: #fff;
+    }
+    h1 {
+        font-size: 24pt;
+        border-bottom: 2px solid #0969da;
+        padding-bottom: 10px;
+        margin-bottom: 8px;
+        color: #0969da;
+        text-align: center;
+    }
+    h2 {
+        font-size: 16pt;
+        border-bottom: 1px solid #d0d7de;
+        padding-bottom: 6px;
+        margin-top: 28px;
+        color: #1f2328;
+    }
+    h3 {
+        font-size: 12.5pt;
+        margin-top: 20px;
+        color: #24292f;
+    }
+    p, li {
+        font-size: 11pt;
+        text-align: justify;
+    }
+    code {
+        background-color: #f6f8fa;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 9.5pt;
+        color: #cf222e;
+    }
+    pre {
+        background-color: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 14px;
+        overflow-x: auto;
+    }
+    pre code {
+        background-color: transparent;
+        padding: 0;
+        color: #24292f;
+        font-size: 9pt;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 10.5pt;
+    }
+    th, td {
+        border: 1px solid #d0d7de;
+        padding: 8px 12px;
+        text-align: left;
+    }
+    th {
+        background-color: #f6f8fa;
+        font-weight: 600;
+    }
+    tr:nth-child(even) {
+        background-color: #fbfcfd;
+    }
+    blockquote {
+        border-left: 4px solid #0969da;
+        padding: 8px 16px;
+        color: #57606a;
+        background-color: #f6f8fa;
+        margin: 16px 0;
+        border-radius: 0 4px 4px 0;
+    }
+    hr {
+        border: 0;
+        height: 1px;
+        background: #d0d7de;
+        margin: 28px 0;
+    }
+</style>
+</head>
+<body>
+<h1>Topological Neuro-Symbolic Engine (T-NSE): Object-Centric Spatial Induction for the Abstraction and Reasoning Corpus</h1>
+<p><strong>Official Technical Paper — Kaggle ARC Prize 2026 (Paper Track)</strong><br />
+<strong>Track:</strong> Main Track (ARC-AGI-2 / ARC-AGI-3)<br />
+<strong>Author:</strong> Emerson Noé José dos Santos<br />
+<strong>Official Verified Submission ID (Main Track):</strong> <code>57107077</code> (T-NSE v6)<br />
+<strong>Project Notebook:</strong> <code>Neuro-Simbolic_Espacial_Topologico_ARC.ipynb</code><br />
+<strong>Official Repository:</strong> <a href="https://github.com/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC">github.com/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC</a>  </p>
+<hr />
+<h2>Executive Abstract</h2>
+<p>The <em>Abstraction and Reasoning Corpus</em> (ARC) challenges artificial intelligence systems to acquire novel skills from a handful of demonstrations without task-specific pre-training. Dominant AI paradigms face a fundamental dichotomy: large language models (LLMs) and vision-language models (VLMs) suffer from spatial blindness and coordinate hallucinations caused by serializing 2D discrete grids into 1D token sequences; conversely, pure brute-force symbolic program synthesis quickly collapses due to combinatorial explosion $\mathcal{O}(|\mathcal{D}|^L)$.</p>
+<p>To bridge this divide, we introduce the <strong>Topological Neuro-Symbolic Engine (T-NSE)</strong>. T-NSE decouples visual reasoning into three synergistic stages grounded in cognitive <em>Core Knowledge priors</em>:
+1. <strong>Topological Object Perception:</strong> Discrete decomposition of the input lattice into invariant physical entities and coherent boundary manifolds using configurable connectivity (4- or 8-connectivity);
+2. <strong>Topological Scene Graph (TSG):</strong> Construction of an attributed relational graph capturing spatial adjacency, enclosure within interior cavities (topological holes), and relative centroid offset vectors;
+3. <strong>Hypothesis-Pruned Symbolic Synthesis with Deterministic Verification:</strong> Shortest-first search over a compact, strongly-typed Domain-Specific Language (DSL), pruned by relational heuristics and strictly verified under zero loss ($\text{Loss} = 0$) across 100% of demonstration pairs.</p>
+<p>The architecture was implemented end-to-end in Python/NumPy, validated on canonical ARC benchmarks (including official challenge <code>007bbfb7</code>), and executed offline inside Kaggle's evaluation environment, achieving an officially scored entry under <strong>Submission ID <code>57107077</code></strong>.</p>
+<hr />
+<h2>1. Theoretical Motivation &amp; The "Why" (Theory &amp; Progress)</h2>
+<h3>1.1 The Pitfalls of Connectionism and Blind Symbolism</h3>
+<p>ARC (Chollet, 2019) was designed to measure <em>skill-acquisition efficiency</em> rather than crystallized statistical knowledge. Deep connectionist architectures and autoregressive LLMs treat $H \times W$ grids as flattened string sequences. This linearization destroys fundamental two-dimensional topological locality, rendering models incapable of systematically verifying spatial predicates such as "lies inside a cavity", "touches the boundary", or "preserves bilateral symmetry".</p>
+<p>On the other hand, addressing ARC through unguided brute-force search over a domain-specific language leads to an intractable combinatorial search space:
+$$\mathcal{N}(L) = \sum_{d=1}^{L} |\mathcal{D}|^d$$
+Even for a modest vocabulary of $|\mathcal{D}| = 75$ primitives, evaluating compositions up to depth $L = 3$ requires testing more than $420,000$ candidate programs per task. In competitions such as ARC-AGI-2, where over 100 hidden tasks must be solved within strict offline CPU quotas, blind search inevitably triggers runtime timeouts and out-of-memory errors.</p>
+<h3>1.2 Cognitive Foundations: Core Knowledge Priors</h3>
+<p>Human solvers solve most ARC tasks within seconds without thousands of gradient updates. This efficiency originates from <em>Core Knowledge Priors</em> (Spelke &amp; Kinzler, 2007; Chollet, 2019):
+* <strong>Objectness &amp; Cohesion:</strong> Contiguous same-colored pixels move and transform as solid, indivisible physical objects;
+* <strong>Topological Invariants:</strong> Connectivity, closed contours, and the number of enclosed cavities (discrete analogues of the Euler characteristic) persist across translation, rotation, and non-destructive recoloring;
+* <strong>Goal-Directed Morphisms:</strong> Transformations between input and output represent structured operations applied to identified entities rather than arbitrary pixel-level noise.</p>
+<p>T-NSE explicitly bakes these three axioms into its representational state, shrinking the search space from raw pixel lattice configurations ($\sim 10^{900}$ states on $30 \times 30$ grids) down to structured object graph morphisms ($\sim 10^3$ verified candidate programs).</p>
+<hr />
+<h2>2. Mathematical Formalization of the Architecture (Completeness &amp; Novelty)</h2>
+<p>T-NSE executes an entirely deterministic, five-module pipeline:</p>
+<pre><code>+-----------------------------------------------------------------------------------------+
+|                                    INPUT GRID G                                         |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|  MODULE 1: TOPOLOGICAL PERCEPTION (ARCObjectExtractor)                                  |
+|  * Multilayer color segmentation (c ∈ {1..9}, background c=0)                           |
+|  * Connected component labeling (4- or 8-connectivity with NumPy BFS fallback)          |
+|  * Entity formalization: o_i = ⟨ c_i, M_i, b_i, A_i, c_i ⟩                              |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|  MODULE 2: TOPOLOGICAL SCENE GRAPH - TSG (build_scene_graph)                            |
+|  * Boundary flood-fill cavity detection (enclosed_cells)                                |
+|  * Typed relational edges: Adjacency (dist ≤ 1) and Containment (M_j ⊂ Hole(M_i))       |
+|  * Relative centroid offset vector: Δc_ij = c_j - c_i                                   |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|  MODULE 3: HEURISTIC HYPOTHESIS PRUNER (prune_dsl)                                      |
+|  * Demonstration pair delta analysis (dimension shifts, transposition, scale, palette)  |
+|  * Selective active DSL subspace pruning (reducing 75 down to 3-15 active primitives)   |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|  MODULE 4: SYMBOLIC DSL ENGINE &amp; VERIFICATION (ARCSymbolicEngine)                       |
+|  * Shortest-first exhaustive enumeration (depth 1 -&gt; depth 2)                           |
+|  * Deterministic acceptance criterion: Loss = 0 across ALL training demonstrations     |
+|  * Deterministic application to hidden test input: O_test = P*(I_test)                  |
++-----------------------------------------------------------------------------------------+
+                                             |
+                                             v
++-----------------------------------------------------------------------------------------+
+|  MODULE 5: KAGGLE ARC-AGI-2 SUBMISSION PIPELINE (submission.json)                       |
+|  * Robust glob discovery across arbitrary /kaggle/input/ directory structures           |
+|  * Per-task timeout quota (max_time=1.5s with guaranteed identity fallback)             |
+|  * Official submission formatting with attempt_1 and attempt_2                          |
++-----------------------------------------------------------------------------------------+
+</code></pre>
+<h3>2.1 Discrete Perception and Object Extraction</h3>
+<p>Given an input discrete lattice $\mathbf{G} \in {0, \dots, 9}^{H \times W}$, background cells ($c = 0$) are segregated, and each foreground color $c \in {1, \dots, 9}$ is segmented into connected components. Every detected object $o_i$ is formalized as a 5-tuple:</p>
+<p>$$o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle$$</p>
+<p>Where:
+* $c_i \in {1, \dots, 9}$ is the categorical color label;
+* $\mathcal{M}<em>i \in {0, 1}^{H \times W}$ is the binary spatial support mask;
+* $\mathbf{b}_i = (x_i, y_i, w_i, h_i)$ is the minimal axis-aligned bounding box;
+* $A_i = \sum</em>{x,y} \mathcal{M}_i(x,y)$ is the discrete pixel mass;
+* $\mathbf{c}_i = (\bar{x}_i, \bar{y}_i)$ is the spatial centroid.</p>
+<p><strong>Configurable Discrete Topology:</strong> Component connectivity is parameterized via <code>connectivity=4</code> (ARC's strict orthogonal convention) or <code>connectivity=8</code> (diagonal merging). The labeling module wraps <code>cv2.connectedComponents</code> when OpenCV is present, with an automatic fallback to pure NumPy Breadth-First Search (BFS) to guarantee zero-dependency reproducibility.</p>
+<h3>2.2 The Topological Scene Graph (TSG)</h3>
+<p>Visual perception is represented as a directed attributed relational graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$, where vertices $\mathcal{V} = {o_1, \dots, o_n}$ denote isolated physical objects and directed edges $e_{ij} = (o_i, o_j, r, \Delta \mathbf{c}_{ij}) \in \mathcal{E}$ encode exact spatial predicates:</p>
+<ol>
+<li><strong>Topological Containment (<code>contains</code>):</strong> Object $o_j$ is entirely enveloped within an interior cavity (hole) of $o_i$. Cavities are computed via <code>enclosed_cells(\mathcal{M}_i)</code>: a flood-fill from all four grid boundaries marks empty exterior pixels; any non-mask cell unreachable from the boundary constitutes an interior hole. Each node records its hole cell count ($n_{\text{hole}}$).</li>
+<li><strong>Orthogonal Adjacency (<code>adjacent</code>):</strong> Support masks of $o_i$ and $o_j$ touch with a Manhattan distance $\le 1$ ($\text{dist}(\mathcal{M}_i, \mathcal{M}_j) \le 1$).</li>
+<li><strong>Relative Centroid Vector (<code>delta</code>):</strong> The relative offset between centroids: $\Delta \mathbf{c}_{ij} = \mathbf{c}_j - \mathbf{c}_i$.</li>
+</ol>
+<h3>2.3 Strongly-Typed Domain-Specific Language (DSL)</h3>
+<p>T-NSE defines a compact, typed DSL comprising 75 primitives organized into five functional families:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Primitives</th>
+<th style="text-align: center;">Cardinality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Affine (Dihedral Group $\mathcal{D}_4$)</strong></td>
+<td><code>rot90</code>, <code>rot180</code>, <code>rot270</code>, <code>flip_h</code>, <code>flip_v</code>, <code>transpose</code></td>
+<td style="text-align: center;">6</td>
+</tr>
+<tr>
+<td><strong>Topological</strong></td>
+<td><code>fill_holes(c)</code>: flood-fills enclosed cavities with color $c \in {1..9}$</td>
+<td style="text-align: center;">9</td>
+</tr>
+<tr>
+<td><strong>Palette / Colorimetric</strong></td>
+<td><code>recolor_all(c)</code>: recolors all foreground cells to color $c \in {1..9}$</td>
+<td style="text-align: center;">9</td>
+</tr>
+<tr>
+<td><strong>Geometric (Translation)</strong></td>
+<td><code>translate(dx, dy)</code> for $dx, dy \in {-3..3} \setminus {(0,0)}$</td>
+<td style="text-align: center;">48</td>
+</tr>
+<tr>
+<td><strong>Structural / Fractal</strong></td>
+<td><code>fractal_self_tile</code> (Kronecker self-tiling), <code>upscale(k)</code> for $k \in {2, 3}$</td>
+<td style="text-align: center;">3</td>
+</tr>
+<tr>
+<td><strong>Identity</strong></td>
+<td><code>identity</code></td>
+<td style="text-align: center;">1</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td style="text-align: center;"><strong>75</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Two structural primitives leverage linear algebra via Kronecker products:</p>
+<pre><code class="language-python">def fractal_self_tile(grid):
+    g = np.array(grid, dtype=np.uint8)
+    return np.kron((g != 0).astype(np.uint8), g)
+
+def upscale(grid, k):
+    return np.kron(np.array(grid, dtype=np.uint8), np.ones((k, k), dtype=np.uint8))
+</code></pre>
+<h3>2.4 Heuristic Hypothesis Pruning (TSG / Delta Pruning)</h3>
+<p>To prevent combinatorial explosion, <code>prune_dsl(train_pairs)</code> inspects geometric differences between input and output demonstration pairs before program synthesis begins:
+* <strong>Shape Preservation:</strong> If input and output shapes match across all pairs, scaling and fractal operators are discarded, retaining rotations, reflections, cavity filling, and translations;
+* <strong>Transposition Detection:</strong> If dimensions transpose ($H_{out} = W_{in}$ and $W_{out} = H_{in}$), the active set is restricted to 90°/270° rotations and matrix transposition;
+* <strong>Scaling Detection:</strong> If dimensions scale by an integer factor $k \in {2, 3}$, search is narrowed strictly to <code>upscale(k)</code>;
+* <strong>Fractal Expansion:</strong> If $H_{out} = H_{in}^2$ and $W_{out} = W_{in}^2$, the engine activates <code>fractal_self_tile</code>;
+* <strong>Palette Pruning:</strong> <code>fill_holes(c)</code> and <code>recolor_all(c)</code> are pruned to only test colors that actually appear in the target demonstration grids ($c \in \text{Colors}(\mathbf{G}_{out})$).</p>
+<p>This pruning heuristic reduces the active primitive catalog from 75 down to <strong>3 to 15 candidates</strong>, enabling complete depth-1 search in milliseconds and depth-2 synthesis in under one second.</p>
+<h3>2.5 Deterministic Verification &amp; Loss Function</h3>
+<p>Given a candidate sequence of primitives $P = (f_1, f_2, \dots, f_d)$, the program is executed deterministically across all demonstration pairs ${(I_k, O_k)}_{k=1}^{K}$. The verification loss is defined as:</p>
+<p>$$\text{Loss}(P) = \sum_{k=1}^{K} \big\lVert P(I_k) - O_k \big\rVert_0 \quad (\text{with } \text{Loss} = \infty \text{ if } \text{shape}(P(I_k)) \ne \text{shape}(O_k))$$</p>
+<p>A program $P^<em>$ is accepted </em><em>if and only if $\text{Loss}(P^</em>) = 0$ on 100% of training pairs**. The verified program is then applied to the hidden test input:</p>
+<p>$$\mathbf{O}<em>{\text{test}} = P^*(I</em>{\text{test}})$$</p>
+<hr />
+<h2>3. Empirical Validation and Canonical Benchmarks (Accuracy &amp; Completeness)</h2>
+<p>T-NSE underwent testing against both canonical ARC benchmarks and synthetic challenge suites:</p>
+<table>
+<thead>
+<tr>
+<th>Test Case</th>
+<th>Underlying Rule</th>
+<th style="text-align: center;">Candidates Evaluated</th>
+<th style="text-align: center;">Discovered Program</th>
+<th style="text-align: center;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Official Task <code>007bbfb7</code></strong></td>
+<td>Kronecker fractal self-replication</td>
+<td style="text-align: center;">2 candidates</td>
+<td style="text-align: center;"><code>fractal_self_tile</code></td>
+<td style="text-align: center;"><strong>Exact ($\text{Loss}=0$)</strong></td>
+</tr>
+<tr>
+<td><strong>Synthetic: 90° Rotation</strong></td>
+<td>Pure clockwise rotation</td>
+<td style="text-align: center;">2 candidates</td>
+<td style="text-align: center;"><code>rot90</code></td>
+<td style="text-align: center;"><strong>Exact ($\text{Loss}=0$)</strong></td>
+</tr>
+<tr>
+<td><strong>Synthetic: Horizontal Mirror</strong></td>
+<td>Reflection along the vertical axis</td>
+<td style="text-align: center;">18 candidates</td>
+<td style="text-align: center;"><code>flip_h</code></td>
+<td style="text-align: center;"><strong>Exact ($\text{Loss}=0$)</strong></td>
+</tr>
+<tr>
+<td><strong>Synthetic: Cavity Filling</strong></td>
+<td>Enclosed hole filled with color 3</td>
+<td style="text-align: center;">6 candidates</td>
+<td style="text-align: center;"><code>fill_holes(3)</code></td>
+<td style="text-align: center;"><strong>Exact ($\text{Loss}=0$)</strong></td>
+</tr>
+<tr>
+<td><strong>Synthetic: Palette Recolor</strong></td>
+<td>Global foreground recoloring to color 5</td>
+<td style="text-align: center;">55 candidates</td>
+<td style="text-align: center;"><code>recolor_all(5)</code></td>
+<td style="text-align: center;"><strong>Exact ($\text{Loss}=0$)</strong></td>
+</tr>
+<tr>
+<td><strong>Synthetic: Affine Composition</strong></td>
+<td>180° rotation followed by transposition</td>
+<td style="text-align: center;">9 candidates</td>
+<td style="text-align: center;"><code>rot180 -&gt; transpose</code></td>
+<td style="text-align: center;"><strong>Exact (Depth 2)</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>Offline Robustness in Kaggle ARC-AGI-2</h3>
+<p>Module 5 incorporates a submission pipeline engineered to satisfy competition constraints:
+1. <strong>Dynamic File Discovery:</strong> Searches <code>/kaggle/input/</code> recursively via <code>glob</code> for <code>arc-agi_test_challenges.json</code>, ensuring independence from local directory naming conventions;
+2. <strong>Safe Execution Budget:</strong> Employs a strict 1.5s per-task timeout quota, completing the evaluation of over 100 hidden tasks in under two minutes without timeout risks;
+3. <strong>Guaranteed Fallback &amp; Strict Schema:</strong> Produces valid <code>attempt_1</code> and <code>attempt_2</code> matrices formatted in standard JSON, preventing scoring errors caused by missing task keys.</p>
+<hr />
+<h2>4. Official Verification Proof (Submission ID)</h2>
+<p>In compliance with the official ARC Prize 2026 Paper Track rules (<em>Rule 2.1.b: team must match the team submitting to the main competition</em>), the implementation was evaluated on the official platform:</p>
+<ul>
+<li><strong>Associated Competition:</strong> ARC Prize 2026 — ARC-AGI-2</li>
+<li><strong>Submission Name:</strong> <code>T-NSE v6</code></li>
+<li><strong>Official Verified Submission ID:</strong> <strong><code>57107077</code></strong></li>
+<li><strong>Evaluation Status:</strong> Successfully scored and complete on the official leaderboard.</li>
+</ul>
+<hr />
+<h2>5. Universality Beyond ARC (Universality)</h2>
+<p>T-NSE is not an ad-hoc grid puzzle solver; it embodies a general framework for <strong>Object-Centric Relational World Modeling</strong>:</p>
+<ol>
+<li><strong>Autonomous Robotics and Manipulation:</strong> Inducing robotic arm trajectories from few visual demonstrations by converting perceptual video into spatial contact graphs and relative displacement vectors;</li>
+<li><strong>Industrial Automation and CAD:</strong> Verifying component clearances, inspecting PCB trace routing, and enforcing topological containment constraints;</li>
+<li><strong>Physical Common-Sense Reasoning:</strong> Predicting structural stability, container support, and occlusion dynamics using discrete topological invariants.</li>
+</ol>
+<hr />
+<h2>6. Honest Scope and Limitations (Limitations)</h2>
+<p>As a rigorous scientific contribution, we clearly delineate the current boundaries of our prototype:
+* <strong>DSL Expressivity:</strong> The 75-primitive grammar excels at global geometric, affine, and topological fill operations, but tasks requiring continuous fluid simulation or complex multi-step arithmetic lie outside its present vocabulary;
+* <strong>Compositional Depth:</strong> Deterministic search is bounded to depths $L \le 2$ to respect competition execution quotas;
+* <strong>Future Roadmap:</strong> Ongoing work focuses on incorporating Graph Neural Networks (GNNs) over the Topological Scene Graph to probabilistically guide branch expansion, alongside object-level operators (<code>crop_bbox</code>, <code>isolate_object</code>, and directional gravity).</p>
+<hr />
+<h2>7. Conclusion</h2>
+<p>Achieving genuine fluid intelligence requires moving beyond the premise that all reasoning can be solved through statistical token interpolation. The <strong>Topological Neuro-Symbolic Engine (T-NSE)</strong> demonstrates that decoupling structured visual perception (grounded in physical objectness and discrete topology) from a deterministic program synthesis engine yields an explainable, robust, and sample-efficient approach to the Abstraction and Reasoning Corpus.</p>
+<p>By enabling machines to "perceive" objects and their spatial relations before deducing transformation rules, T-NSE establishes a concrete bridge between perceptual representation and symbolic rigor.</p>
+<hr />
+<h3>References</h3>
+<ol>
+<li><strong>Chollet, F.</strong> (2019). <em>On the Measure of Intelligence</em>. arXiv preprint arXiv:1911.01547.</li>
+<li><strong>Spelke, E. S., &amp; Kinzler, K. D.</strong> (2007). <em>Core knowledge</em>. Developmental Science, 10(1), 89-96.</li>
+<li><strong>ARC Prize Foundation.</strong> (2024–2026). <em>ARC-AGI-2 &amp; ARC-AGI-3 Competitions and Technical Documentation</em>. arcprize.org.</li>
+<li><strong>Santos, E. N. J.</strong> (2026). <em>Topological Neuro-Symbolic Engine (T-NSE): Object-Centric Spatial Induction for ARC-AGI</em>. Official GitHub Repository and Kaggle Paper Track Submission.</li>
+</ol>
+</body>
+</html>
