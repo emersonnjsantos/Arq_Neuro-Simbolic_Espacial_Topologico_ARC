@@ -88,15 +88,12 @@ O T-NSE define uma DSL compacta e estritamente tipada contendo 75 primitivas fun
 | **Identidade** | `identity` | 1 |
 | **Total** | | **75** |
 
-Duas primitivas destacam-se pela elegância algébrica com produto de Kronecker:
-```python
-def fractal_self_tile(grid):
-    g = np.array(grid, dtype=np.uint8)
-    return np.kron((g != 0).astype(np.uint8), g)
+Duas primitivas estruturais utilizam a álgebra linear através do produto de Kronecker ($\otimes$), formalizando a auto-similaridade e a ampliação discreta de resoluções:
 
-def upscale(grid, k):
-    return np.kron(np.array(grid, dtype=np.uint8), np.ones((k, k), dtype=np.uint8))
-```
+| Operador Estrutural | Definição Matemática | Formulação em Álgebra Linear |
+|---|---|---|
+| `fractal_self_tile(G)` | Substitui cada pixel foreground ativo por uma réplica completa da grade | $\mathbf{G}_{\text{out}} = \mathbb{I}(\mathbf{G} > 0) \otimes \mathbf{G}$ |
+| `upscale(G, k)` | Ampliação uniforme pelo vizinho mais próximo por fator inteiro $k \in \{2, 3\}$ | $\mathbf{G}_{\text{out}} = \mathbf{G} \otimes \mathbf{J}_{k \times k}$ |
 
 ### 2.4 Poda Heurística de Hipóteses (TSG / Delta Pruning)
 Para impedir a explosão combinatória, a função `prune_dsl(train_pairs)` inspeciona as propriedades dimensionais e topológicas dos pares de demonstração antes de iniciar a busca:

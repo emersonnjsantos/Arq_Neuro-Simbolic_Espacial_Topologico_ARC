@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <title>ARTIGO_NEURO_SIMBOLICO_ARC_2026</title>
 <style>
-body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 25px; line-height: 1.6; color: #1f2328; }
-h1 { color: #0969da; text-align: center; border-bottom: 2px solid #0969da; padding-bottom: 10px; }
-h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 28px; color: #1f2328; }
-h3 { color: #24292f; margin-top: 20px; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 25px; line-height: 1.6; color: #1f2328; }
+h1 { color: #0F3C73; text-align: center; border-bottom: 2px solid #0F3C73; padding-bottom: 10px; }
+h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 28px; color: #0F3C73; }
+h3 { color: #1E5AA0; margin-top: 20px; }
 table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
 th, td { border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; }
 th { background-color: #0F3C73; color: white; }
@@ -162,14 +162,28 @@ Para um vocabulário modesto de $|\mathcal{D}| = 75$ primitivas, uma composiçã
 </tr>
 </tbody>
 </table>
-<p>Duas primitivas destacam-se pela elegância algébrica com produto de Kronecker:</p>
-<pre><code class="language-python">def fractal_self_tile(grid):
-    g = np.array(grid, dtype=np.uint8)
-    return np.kron((g != 0).astype(np.uint8), g)
-
-def upscale(grid, k):
-    return np.kron(np.array(grid, dtype=np.uint8), np.ones((k, k), dtype=np.uint8))
-</code></pre>
+<p>Duas primitivas estruturais utilizam a álgebra linear através do produto de Kronecker ($\otimes$), formalizando a auto-similaridade e a ampliação discreta de resoluções:</p>
+<table>
+<thead>
+<tr>
+<th>Operador Estrutural</th>
+<th>Definição Matemática</th>
+<th>Formulação em Álgebra Linear</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fractal_self_tile(G)</code></td>
+<td>Substitui cada pixel foreground ativo por uma réplica completa da grade</td>
+<td>$\mathbf{G}_{\text{out}} = \mathbb{I}(\mathbf{G} &gt; 0) \otimes \mathbf{G}$</td>
+</tr>
+<tr>
+<td><code>upscale(G, k)</code></td>
+<td>Ampliação uniforme pelo vizinho mais próximo por fator inteiro $k \in {2, 3}$</td>
+<td>$\mathbf{G}<em>{\text{out}} = \mathbf{G} \otimes \mathbf{J}</em>{k \times k}$</td>
+</tr>
+</tbody>
+</table>
 <h3>2.4 Poda Heurística de Hipóteses (TSG / Delta Pruning)</h3>
 <p>Para impedir a explosão combinatória, a função <code>prune_dsl(train_pairs)</code> inspeciona as propriedades dimensionais e topológicas dos pares de demonstração antes de iniciar a busca:
 * Se as dimensões de entrada e saída coincidem em todos os exemplos, excluem-se operadores de redimensionamento e fractais, preservando rotações, espelhamentos, preenchimento de furos e translações;

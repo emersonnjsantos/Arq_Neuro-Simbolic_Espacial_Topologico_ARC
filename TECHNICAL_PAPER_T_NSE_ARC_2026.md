@@ -88,15 +88,12 @@ T-NSE defines a compact, typed DSL comprising 75 primitives organized into five 
 | **Identity** | `identity` | 1 |
 | **Total** | | **75** |
 
-Two structural primitives leverage linear algebra via Kronecker products:
-```python
-def fractal_self_tile(grid):
-    g = np.array(grid, dtype=np.uint8)
-    return np.kron((g != 0).astype(np.uint8), g)
+Two structural primitives leverage linear algebra via Kronecker products ($\otimes$), formalizing self-similarity and discrete magnification:
 
-def upscale(grid, k):
-    return np.kron(np.array(grid, dtype=np.uint8), np.ones((k, k), dtype=np.uint8))
-```
+| Structural Operator | Mathematical Definition | Linear Algebra Formulation |
+|---|---|---|
+| `fractal_self_tile(G)` | Replaces each active foreground cell with a full replica of the grid | $\mathbf{G}_{\text{out}} = \mathbb{I}(\mathbf{G} > 0) \otimes \mathbf{G}$ |
+| `upscale(G, k)` | Uniform nearest-neighbor magnification by integer factor $k \in \{2, 3\}$ | $\mathbf{G}_{\text{out}} = \mathbf{G} \otimes \mathbf{J}_{k \times k}$ |
 
 ### 2.4 Heuristic Hypothesis Pruning (TSG / Delta Pruning)
 To prevent combinatorial explosion, `prune_dsl(train_pairs)` inspects geometric differences between input and output demonstration pairs before program synthesis begins:
