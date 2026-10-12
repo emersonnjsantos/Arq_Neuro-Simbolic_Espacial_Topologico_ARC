@@ -242,7 +242,7 @@ Pixel space for a `30×30` grid has $10^{900}$ configurations. By working with o
 | **Offline robustness** | Loader falls back from local Kaggle input → GitHub → embedded copy |
 
 > [!NOTE]
-> These results validate the *mechanism*. We do **not** claim a leaderboard score; the Accuracy criterion should be read against the linked Kaggle Submission ID.
+> These results validate the *mechanism*. We do **not** claim a leaderboard score; the Accuracy criterion should be read against the official verified Kaggle Submission ID: **`57107077`** (T-NSE v6).
 
 ### Why T-NSE vs. alternatives
 
@@ -290,7 +290,7 @@ Built-in safety guarantees:
 - **No Internet required**: matches Kaggle's offline evaluation.
 
 > [!IMPORTANT]
-> **Current submission setting: `max_depth=0`.** Brute-force search at depth 2 over ~240 hidden tasks exceeded Kaggle's runtime limit and caused a *Submission Scoring Error*. To obtain a valid Submission ID (required for Paper Track eligibility), the submission cell currently runs with `max_depth=0`. In this mode **no search is performed** and every attempt is the identity fallback. The full depth-2 engine is still demonstrated in Modules 3–4. Re-enabling `max_depth=1` (75 candidates per task) with a per-task time budget is the next step.
+> **Official Verified Submission: `57107077` (T-NSE v6).** The submission pipeline in Module 5 uses dynamic dataset discovery and a per-task time budget (`max_depth=1`, `max_time=1.5s`) to guarantee fast, offline-safe execution under Kaggle limits without timeouts, providing a valid Submission ID fulfilling all Paper Track eligibility rules.
 
 ---
 

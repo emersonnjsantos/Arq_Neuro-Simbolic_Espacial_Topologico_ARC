@@ -6,7 +6,7 @@ Author: Emerson Noe Jose dos Santos
 Track: ARC Prize 2026 - Paper Track (ARC-AGI-2)
 Notebook: Neuro-Simbolic_Espacial_Topologico_ARC.ipynb
 Repository: https://github.com/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC
-Submission ID: Pending (Notebook in preparation for ARC-AGI-2 leaderboard)
+Submission ID: 57107077 (T-NSE v6, ARC-AGI-2 official verified submission)
 
 
 1. Introduction

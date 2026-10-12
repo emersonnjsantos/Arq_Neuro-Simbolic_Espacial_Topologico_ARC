@@ -5,6 +5,7 @@
 **Repositório:** [Arq_Neuro-Simbolic_Espacial_Topologico_ARC](https://github.com/emersonnjsantos/Arq_Neuro-Simbolic_Espacial_Topologico_ARC)  
 **Notebook do Projeto:** [`Neuro-Simbolic_Espacial_Topologico_ARC.ipynb`](./Neuro-Simbolic_Espacial_Topologico_ARC.ipynb)  
 **Relatório Oficial (Inglês, <= 1.500 palavras):** [`SUBMISSION_ARC_PRIZE_2026_REPORT.md`](./SUBMISSION_ARC_PRIZE_2026_REPORT.md)  
+**Submission ID Oficial (Main Track):** `57107077` (T-NSE v6)  
 **Imagem de Capa (Media Gallery):** [`cover_image_arc_prize_2026.jpg`](./cover_image_arc_prize_2026.jpg)  
 
 ---
