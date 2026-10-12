@@ -27,9 +27,11 @@ The architecture was implemented end-to-end in Python/NumPy, validated on canoni
 ### 1.1 The Pitfalls of Connectionism and Blind Symbolism
 ARC (Chollet, 2019) was designed to measure *skill-acquisition efficiency* rather than crystallized statistical knowledge. Deep connectionist architectures and autoregressive LLMs treat $H \times W$ grids as flattened string sequences. This linearization destroys fundamental two-dimensional topological locality, rendering models incapable of systematically verifying spatial predicates such as "lies inside a cavity", "touches the boundary", or "preserves bilateral symmetry".
 
-On the other hand, addressing ARC through unguided brute-force search over a domain-specific language leads to an intractable combinatorial search space:
-$$\mathcal{N}(L) = \sum_{d=1}^{L} |\mathcal{D}|^d$$
-Even for a modest vocabulary of $|\mathcal{D}| = 75$ primitives, evaluating compositions up to depth $L = 3$ requires testing more than $420,000$ candidate programs per task. In competitions such as ARC-AGI-2, where over 100 hidden tasks must be solved within strict offline CPU quotas, blind search inevitably triggers runtime timeouts and out-of-memory errors.
+On the other hand, addressing ARC through unguided brute-force search over a domain-specific language leads to an intractable combinatorial search space. The total number of candidate programs $N(L)$ evaluated up to compositional depth $L$ is given by the geometric progression of candidate compositions:
+
+$$N(L) = |D|^1 + |D|^2 + \dots + |D|^L$$
+
+Where $|D|$ represents the vocabulary of available DSL primitives. For a modest vocabulary of $|D| = 75$ primitives, searching compositions up to depth $L = 3$ requires testing no less than **427,575 candidate programs** per task (75 single-step + 5,625 two-step + 421,875 three-step programs). In competitions such as ARC-AGI-2, where over 100 hidden tasks must be solved within strict offline CPU quotas, blind search inevitably triggers runtime timeouts and out-of-memory errors.
 
 ### 1.2 Cognitive Foundations: Core Knowledge Priors
 Human solvers solve most ARC tasks within seconds without thousands of gradient updates. This efficiency originates from *Core Knowledge Priors* (Spelke & Kinzler, 2007; Chollet, 2019):
@@ -37,7 +39,7 @@ Human solvers solve most ARC tasks within seconds without thousands of gradient 
 * **Topological Invariants:** Connectivity, closed contours, and the number of enclosed cavities (discrete analogues of the Euler characteristic) persist across translation, rotation, and non-destructive recoloring;
 * **Goal-Directed Morphisms:** Transformations between input and output represent structured operations applied to identified entities rather than arbitrary pixel-level noise.
 
-T-NSE explicitly bakes these three axioms into its representational state, shrinking the search space from raw pixel lattice configurations ($\sim 10^{900}$ states on $30 \times 30$ grids) down to structured object graph morphisms ($\sim 10^3$ verified candidate programs).
+T-NSE explicitly bakes these three axioms into its representational state, shrinking the search space from raw pixel lattice configurations (an astronomical scale of $\sim 10^{900}$ possible states on $30 \times 30$ grids) down to structured object graph morphisms (pruned down to $\sim 1,000$ verified candidate programs).
 
 ---
 
@@ -47,24 +49,24 @@ T-NSE organizes spatial induction into an end-to-end deterministic pipeline stru
 
 | Pipeline Stage | Implementation Module | Formal Operation & Mathematical Mechanism | Output Representation |
 |---|---|---|---|
-| **0. Raw Ingestion** | Input Grid $\mathbf{G}$ | Parse raw task JSON into discrete 2D integer lattice $\mathbf{G} \in \{0,\dots,9\}^{H \times W}$ | Raw Discrete Lattice |
-| **Stage 1 · Perception** | `ARCObjectExtractor` | Multilayer color filtering; 4- or 8-connectivity labeling (OpenCV / pure-NumPy BFS) | Entity Set $\mathcal{O} = \{o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle\}$ |
-| **Stage 2 · Topology** | `build_scene_graph` | Boundary flood-fill cavity detection (`enclosed_cells`); typed relation extraction | Attributed Graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ with `contains`, `adjacent`, $\Delta\mathbf{c}_{ij}$ |
-| **Stage 3 · Pruning** | `prune_dsl` | Pairwise training deltas (shape preservation, scale factor, transpositions, active colors) | Filtered Sub-DSL $\mathcal{D}^* \subset \mathcal{D}$ (3 to 15 active primitives) |
-| **Stage 4 · Synthesis** | `ARCSymbolicEngine` | Shortest-first enumerative search (depth 1–2); verification loss $\sum \|P(I_k) - O_k\|_0 = 0$ | Verified Deterministic Program $P^*$ |
+| **0. Raw Ingestion** | Input Grid $G$ | Parse raw task JSON into discrete 2D integer lattice (values 0–9) of dimension $H \times W$ | Raw Discrete Lattice |
+| **Stage 1 · Perception** | `ARCObjectExtractor` | Multilayer color filtering; 4- or 8-connectivity component labeling (OpenCV / pure-NumPy BFS) | Entity Set $\mathcal{O} = \{o_1, \dots, o_n\}$ with physical attributes |
+| **Stage 2 · Topology** | `build_scene_graph` | Boundary flood-fill cavity detection (`enclosed_cells`); typed relation extraction | Attributed Graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ with enclosure, adjacency, and offsets |
+| **Stage 3 · Pruning** | `prune_dsl` | Pairwise training deltas (shape preservation, scale factor, transpositions, active colors) | Filtered Sub-DSL $\mathcal{D}^*$ (reduced from 75 down to 3–15 active primitives) |
+| **Stage 4 · Synthesis** | `ARCSymbolicEngine` | Shortest-first enumerative search (depth 1–2); deterministic verification loss with 100% accuracy | Verified Deterministic Program $P^*$ |
 | **Stage 5 · Inference** | Submission Generator | Apply $P^*(I_{\text{test}})$; compile `attempt_1` & `attempt_2` into `/kaggle/working/submission.json` | Scored Kaggle ARC-AGI-2 Submission |
 
 ### 2.1 Discrete Perception and Object Extraction
-Given an input discrete lattice $\mathbf{G} \in \{0, \dots, 9\}^{H \times W}$, background cells ($c = 0$) are segregated, and each foreground color $c \in \{1, \dots, 9\}$ is segmented into connected components. Every detected object $o_i$ is formalized as a 5-tuple:
+Given an input discrete lattice $G$ of dimensions $H \times W$, background cells ($c = 0$) are segregated, and each foreground color $c \in \{1, \dots, 9\}$ is segmented into connected components. Every detected object $o_i$ is formalized as a 5-tuple:
 
-$$o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle$$
+$$o_i = \langle c_i, M_i, b_i, A_i, c_i^* \rangle$$
 
-Where:
-* $c_i \in \{1, \dots, 9\}$ is the categorical color label;
-* $\mathcal{M}_i \in \{0, 1\}^{H \times W}$ is the binary spatial support mask;
-* $\mathbf{b}_i = (x_i, y_i, w_i, h_i)$ is the minimal axis-aligned bounding box;
-* $A_i = \sum_{x,y} \mathcal{M}_i(x,y)$ is the discrete pixel mass;
-* $\mathbf{c}_i = (\bar{x}_i, \bar{y}_i)$ is the spatial centroid.
+Where each component describes a concrete physical property:
+* **Color ($c_i$):** Categorical color label (integer $1 \le c_i \le 9$);
+* **Spatial Mask ($M_i$):** Binary support matrix in $\{0, 1\}^{H \times W}$ denoting the exact pixel occupancy;
+* **Bounding Box ($b_i$):** Minimal bounding box $(x_i, y_i, w_i, h_i)$;
+* **Area or Mass ($A_i$):** Discrete pixel mass (total count of foreground cells);
+* **Centroid ($c_i^*$):** Continuous spatial center of mass $(\bar{x}_i, \bar{y}_i)$.
 
 **Configurable Discrete Topology:** Component connectivity is parameterized via `connectivity=4` (ARC's strict orthogonal convention) or `connectivity=8` (diagonal merging). The labeling module wraps `cv2.connectedComponents` when OpenCV is present, with an automatic fallback to pure NumPy Breadth-First Search (BFS) to guarantee zero-dependency reproducibility.
 
@@ -88,12 +90,12 @@ T-NSE defines a compact, typed DSL comprising 75 primitives organized into five 
 | **Identity** | `identity` | 1 |
 | **Total** | | **75** |
 
-Two structural primitives leverage linear algebra via Kronecker products ($\otimes$), formalizing self-similarity and discrete magnification:
+Two structural primitives leverage matrix algebra via Kronecker products ($\otimes$), capturing fractal self-similarity and discrete resolution scaling:
 
-| Structural Operator | Mathematical Definition | Linear Algebra Formulation |
+| Structural Operator | Transformation Description | Exact Matrix Formulation |
 |---|---|---|
-| `fractal_self_tile(G)` | Replaces each active foreground cell with a full replica of the grid | $\mathbf{G}_{\text{out}} = \mathbb{I}(\mathbf{G} > 0) \otimes \mathbf{G}$ |
-| `upscale(G, k)` | Uniform nearest-neighbor magnification by integer factor $k \in \{2, 3\}$ | $\mathbf{G}_{\text{out}} = \mathbf{G} \otimes \mathbf{J}_{k \times k}$ |
+| `fractal_self_tile(G)` | Replaces each active foreground cell with a full replica of grid $G$, creating fractal self-similarity | $G_{\text{out}} = (G > 0) \otimes G$ <br>*(Kronecker product of the binary active mask by the original grid)* |
+| `upscale(G, k)` | Uniform nearest-neighbor magnification by integer scale factor $k \in \{2, 3\}$ | $G_{\text{out}} = G \otimes 1_{k \times k}$ <br>*(Kronecker product of the grid by a unit block of size $k \times k$)* |
 
 ### 2.4 Heuristic Hypothesis Pruning (TSG / Delta Pruning)
 To prevent combinatorial explosion, `prune_dsl(train_pairs)` inspects geometric differences between input and output demonstration pairs before program synthesis begins:
@@ -101,18 +103,24 @@ To prevent combinatorial explosion, `prune_dsl(train_pairs)` inspects geometric 
 * **Transposition Detection:** If dimensions transpose ($H_{out} = W_{in}$ and $W_{out} = H_{in}$), the active set is restricted to 90°/270° rotations and matrix transposition;
 * **Scaling Detection:** If dimensions scale by an integer factor $k \in \{2, 3\}$, search is narrowed strictly to `upscale(k)`;
 * **Fractal Expansion:** If $H_{out} = H_{in}^2$ and $W_{out} = W_{in}^2$, the engine activates `fractal_self_tile`;
-* **Palette Pruning:** `fill_holes(c)` and `recolor_all(c)` are pruned to only test colors that actually appear in the target demonstration grids ($c \in \text{Colors}(\mathbf{G}_{out})$).
+* **Palette Pruning:** `fill_holes(c)` and `recolor_all(c)` are pruned to only test colors that actually appear in the target demonstration grids ($c \in \text{Colors}(G_{out})$).
 
 This pruning heuristic reduces the active primitive catalog from 75 down to **3 to 15 candidates**, enabling complete depth-1 search in milliseconds and depth-2 synthesis in under one second.
 
 ### 2.5 Deterministic Verification & Loss Function
-Given a candidate sequence of primitives $P = (f_1, f_2, \dots, f_d)$, the program is executed deterministically across all demonstration pairs $\{(I_k, O_k)\}_{k=1}^{K}$. The verification loss is defined as:
+Given a candidate sequence of primitives $P = (f_1, f_2, \dots, f_d)$, the candidate program is deterministically verified across all $K$ training demonstration pairs $\{(I_1, O_1), \dots, (I_K, O_K)\}$. The evaluation function measures exact pixel divergence:
 
-$$\text{Loss}(P) = \sum_{k=1}^{K} \big\lVert P(I_k) - O_k \big\rVert_0 \quad (\text{with } \text{Loss} = \infty \text{ if } \text{shape}(P(I_k)) \ne \text{shape}(O_k))$$
+$$\text{Loss}(P) = \sum_{k=1}^{K} \text{Divergence}(P(I_k), O_k)$$
 
-A program $P^*$ is accepted **if and only if $\text{Loss}(P^*) = 0$ on 100% of training pairs**. The verified program is then applied to the hidden test input:
+* If the shape of the generated grid differs from the expected output shape, the loss is assigned as infinity ($\text{Loss} = \infty$).
+* Otherwise, the loss corresponds to the exact count of mismatching pixels between prediction and target.
 
-$$\mathbf{O}_{\text{test}} = P^*(I_{\text{test}})$$
+**Deterministic Acceptance Criterion:**
+$$\text{Criterion:} \quad \text{Loss}(P^*) = 0 \quad (\text{100% exact match across all training pairs})$$
+
+A program is accepted if and only if it achieves zero errors across every demonstration pair. The verified program is then applied to the hidden test input:
+
+$$\text{Solved Test Grid} = P^*(I_{\text{test}})$$
 
 ---
 

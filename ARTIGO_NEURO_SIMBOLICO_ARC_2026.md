@@ -27,9 +27,11 @@ A arquitetura foi implementada de ponta a ponta em Python/NumPy, validada em tar
 ### 1.1 As Limitações do Conexionismo Puro e do Simbolismo Cego
 O ARC (Chollet, 2019) foi concebido para medir a *eficiência na aquisição de habilidades* em vez de meras habilidades cristalizadas. Modelos conexionistas profundos e LLMs autorregressivos tratam grades $H \times W$ como sequências lineares de inteiros ou tokens. Essa linearização destrói a localidade espacial bidimensional fundamental, tornando os modelos incapazes de deduzir relações topológicas elementares como "estar contido dentro de uma cavidade", "tocar na borda externa" ou "conservar a simetria reflexiva".
 
-Por outro lado, abordar o ARC exclusivamente através de busca exaustiva por força bruta em linguagens de domínio específico implica em um horizonte exponencial de busca:
-$$\mathcal{N}(L) = \sum_{d=1}^{L} |\mathcal{D}|^d$$
-Para um vocabulário modesto de $|\mathcal{D}| = 75$ primitivas, uma composição de profundidade $L = 3$ exige testar mais de $420.000$ candidatos por tarefa. Em competições como o ARC-AGI-2, onde mais de 100 tarefas devem ser avaliadas sob estritos limites de tempo computacional (sem acesso à Internet), a busca cega falha inevitavelmente por estouro de tempo (*timeout*).
+Por outro lado, abordar o ARC exclusivamente através de busca exaustiva por força bruta em linguagens de domínio específico (DSL) provoca uma explosão combinatorial intratável. O número total de programas candidatos $N(L)$ a serem avaliados até uma profundidade de passos $L$ é a soma geométrica de todas as combinações possíveis de 1 até $L$ passos:
+
+$$N(L) = |D|^1 + |D|^2 + \dots + |D|^L$$
+
+Onde $|D|$ é a quantidade de operadores disponíveis na linguagem. Para um vocabulário de apenas 75 operadores ($|D| = 75$), avaliar composições de até 3 passos ($L = 3$) exige testar nada menos que **427.575 programas candidatos** por tarefa (75 no nível 1 + 5.625 no nível 2 + 421.875 no nível 3). Em competições como o ARC-AGI-2, onde mais de 100 tarefas secretas devem ser processadas sequencialmente sob limites rigorosos de tempo de CPU e sem internet, a busca cega sem poda resulta inevitavelmente em estouro de tempo (*timeout*).
 
 ### 1.2 Fundamentação Cognitiva: Priors de Core Knowledge
 Solucionadores humanos resolvem a maioria dos puzzles do ARC em segundos sem necessidade de milhares de exemplos de treino. Esse desempenho decorre do ancoramento em *Priors de Conhecimento Central* (*Core Knowledge Priors*, Spelke & Kinzler, 2007; Chollet, 2019):
@@ -37,7 +39,7 @@ Solucionadores humanos resolvem a maioria dos puzzles do ARC em segundos sem nec
 * **Invariantes Topológicos:** Conectividade, contorno fechado e número de cavidades internas (análogo à característica de Euler discreta) persistem sob operações de translação, rotação e recolorização;
 * **Morfismos Orientados a Metas:** A transformação entre entrada e saída expressa operações estruturadas sobre entidades identificadas, e não mutações aleatórias pixel a pixel.
 
-O T-NSE incorpora formalmente esses três axiomas em sua arquitetura, transpondo o problema de um espaço de busca combinatório de pixels ($\sim 10^{900}$ combinações possíveis em grades $30 \times 30$) para o espaço de morfismos de grafos de objetos ($\sim 10^3$ programas estruturados).
+O T-NSE incorpora formalmente esses três axiomas em sua arquitetura, transpondo o problema de um espaço de busca combinatório de pixels (uma escala astronômica de aproximadamente $10^{900}$ configurações possíveis em grades de $30 \times 30$) para o espaço tratável de morfismos sobre grafos de objetos (reduzido para aproximadamente $1.000$ hipóteses estruturadas).
 
 ---
 
@@ -47,24 +49,24 @@ O T-NSE organiza a indução espacial em um pipeline determinístico estruturado
 
 | Estágio do Pipeline | Módulo de Implementação | Operação Formal e Mecanismo Matemático | Representação de Saída |
 |---|---|---|---|
-| **0. Ingestão Bruta** | Grade de Entrada $\mathbf{G}$ | Conversão do JSON em matriz discreta bidimensional de inteiros $\mathbf{G} \in \{0,\dots,9\}^{H \times W}$ | Grade Discreta Bruta |
-| **Estágio 1 · Percepção** | `ARCObjectExtractor` | Segmentação multicamada por cor; rotulagem conexa 4/8-conectividade (OpenCV / BFS) | Conjunto de Entidades $\mathcal{O} = \{o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle\}$ |
-| **Estágio 2 · Topologia** | `build_scene_graph` | Detecção de cavidades por flood-fill de borda (`enclosed_cells`); relações topológicas | Grafo Atribuído $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ com `contains`, `adjacent`, $\Delta\mathbf{c}_{ij}$ |
-| **Estágio 3 · Poda** | `prune_dsl` | Análise de deltas nos pares de treino (preservação dimensional, escala, cores ativas) | Sub-DSL Dinâmica $\mathcal{D}^* \subset \mathcal{D}$ (3 a 15 primitivas ativas) |
-| **Estágio 4 · Síntese** | `ARCSymbolicEngine` | Busca gulosa (profundidades 1–2); verificação estrita $\sum \|P(I_k) - O_k\|_0 = 0$ | Programa Determinístico Verificado $P^*$ |
-| **Estágio 5 · Inferência** | Gerador de Submissão | Execução $P^*(I_{\text{test}})$; geração de `attempt_1` e `attempt_2` em `submission.json` | Submissão Válida Kaggle ARC-AGI-2 |
+| **0. Ingestão Bruta** | Grade de Entrada $G$ | Conversão do JSON em matriz discreta bidimensional de pixels (valores de 0 a 9) com dimensões $H \times W$ | Grade Discreta Bruta |
+| **Estágio 1 · Percepção** | `ARCObjectExtractor` | Segmentação por cor; rotulagem de componentes conexos (4 ou 8 vizinhos via OpenCV ou busca em largura) | Conjunto de Entidades $\mathcal{O} = \{o_1, \dots, o_n\}$ com atributos físicos |
+| **Estágio 2 · Topologia** | `build_scene_graph` | Detecção de cavidades internas (`enclosed_cells`); extração de relações espaciais e topológicas | Grafo de Cenas $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ com contenção, adjacência e deslocamentos |
+| **Estágio 3 · Poda** | `prune_dsl` | Comparação de deltas entre entrada e saída (preservação dimensional, escala, reflexão, cores ativas) | Sub-DSL Dinâmica $\mathcal{D}^*$ (reduzida de 75 para 3 a 15 operadores) |
+| **Estágio 4 · Síntese** | `ARCSymbolicEngine` | Busca enumerativa orientada pelo tamanho do programa; verificação estrita de acerto de 100% | Programa Determinístico Validado $P^*$ |
+| **Estágio 5 · Inferência** | Gerador de Submissão | Execução de $P^*$ sobre a grade de teste inédita; gravação de `attempt_1` e `attempt_2` em `submission.json` | Submissão Válida e Pontuada no Kaggle |
 
 ### 2.1 Percepção Discreta e Extração de Objetos
-Dada uma grade bidimensional $\mathbf{G} \in \{0, \dots, 9\}^{H \times W}$, o sistema isola o plano de fundo ($c = 0$) e segmenta cada cor foreground $c \in \{1, \dots, 9\}$ em componentes conectados. Cada objeto $o_i$ é rigorosamente modelado pela 5-tupla:
+Dada uma grade bidimensional $G$ de dimensões $H \times W$, o sistema isola a cor de fundo ($c = 0$) e segmenta as cores restantes ($c \in \{1, \dots, 9\}$) em componentes conectados. Cada objeto $o_i$ identificado é formalizado como uma 5-tupla de propriedades físicas e espaciais:
 
-$$o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle$$
+$$o_i = \langle c_i, M_i, b_i, A_i, c_i^* \rangle$$
 
-Onde:
-* $c_i \in \{1, \dots, 9\}$ é a etiqueta categórica da cor;
-* $\mathcal{M}_i \in \{0, 1\}^{H \times W}$ é a máscara booleana de suporte espacial;
-* $\mathbf{b}_i = (x_i, y_i, w_i, h_i)$ é a caixa delimitadora mínima (*bounding box*);
-* $A_i = \sum_{x,y} \mathcal{M}_i(x,y)$ é a massa discreta (contagem de pixels);
-* $\mathbf{c}_i = (\bar{x}_i, \bar{y}_i)$ é o centroide contínuo de massa.
+Onde cada componente descreve atributos concretos da entidade:
+* **Cor ($c_i$):** Rótulo numérico da cor do objeto (inteiro de 1 a 9);
+* **Máscara Espacial ($M_i$):** Matriz booleana indicando os pixels exatos ocupados pelo objeto na grade;
+* **Caixa Delimitadora ($b_i$):** Caixa retangular mínima envolvente (*bounding box* com coordenadas $x, y$, largura $w$ e altura $h$);
+* **Área ou Massa ($A_i$):** Contagem total de pixels pertencentes ao objeto;
+* **Centroide ($c_i^*$):** Posição central média de massa do objeto nas coordenadas bidimensionais.
 
 **Invariância de Conectividade:** A topologia de adjacência pode ser operada sob 4-conectividade (padrão estrito ortogonal do ARC) ou 8-conectividade (incluindo diagonais), implementada através de `cv2.connectedComponents` com fallback automático para busca em largura pura (BFS) sobre NumPy, eliminando dependências rígidas de sistema operacional.
 
@@ -88,12 +90,12 @@ O T-NSE define uma DSL compacta e estritamente tipada contendo 75 primitivas fun
 | **Identidade** | `identity` | 1 |
 | **Total** | | **75** |
 
-Duas primitivas estruturais utilizam a álgebra linear através do produto de Kronecker ($\otimes$), formalizando a auto-similaridade e a ampliação discreta de resoluções:
+Duas primitivas estruturais utilizam a álgebra matricial através do produto de Kronecker ($\otimes$), modelando a auto-similaridade fractal e a ampliação homogênea de resolução:
 
-| Operador Estrutural | Definição Matemática | Formulação em Álgebra Linear |
+| Operador Estrutural | Descrição da Transformação | Formulação Matricial Exata |
 |---|---|---|
-| `fractal_self_tile(G)` | Substitui cada pixel foreground ativo por uma réplica completa da grade | $\mathbf{G}_{\text{out}} = \mathbb{I}(\mathbf{G} > 0) \otimes \mathbf{G}$ |
-| `upscale(G, k)` | Ampliação uniforme pelo vizinho mais próximo por fator inteiro $k \in \{2, 3\}$ | $\mathbf{G}_{\text{out}} = \mathbf{G} \otimes \mathbf{J}_{k \times k}$ |
+| `fractal_self_tile(G)` | Substitui cada pixel ativo por uma cópia completa da grade $G$, gerando replicação fractal | $G_{\text{saída}} = (G > 0) \otimes G$ <br>*(Produto de Kronecker da máscara ativa pela grade original)* |
+| `upscale(G, k)` | Ampliação uniforme por vizinho mais próximo por um fator de escala inteiro $k \in \{2, 3\}$ | $G_{\text{saída}} = G \otimes 1_{k \times k}$ <br>*(Produto de Kronecker da grade por um bloco unitário de tamanho $k \times k$)* |
 
 ### 2.4 Poda Heurística de Hipóteses (TSG / Delta Pruning)
 Para impedir a explosão combinatória, a função `prune_dsl(train_pairs)` inspeciona as propriedades dimensionais e topológicas dos pares de demonstração antes de iniciar a busca:
@@ -101,18 +103,24 @@ Para impedir a explosão combinatória, a função `prune_dsl(train_pairs)` insp
 * Se as dimensões da grade sofrem transposição ($H_{out} = W_{in}$ e $W_{out} = H_{in}$), ativam-se estritamente rotações de 90°/270° e transposição matricial;
 * Se as dimensões escalam exatamente por fator $k \in \{2, 3\}$, a busca é restrita à família `upscale(k)`;
 * Se $H_{out} = H_{in}^2$ e $W_{out} = W_{in}^2$, ativa-se imediatamente `fractal_self_tile`;
-* Primitivas de preenchimento (`fill_holes`) e recolorização (`recolor_all`) são filtradas para incluir apenas cores efetivamente presentes no conjunto de saída ($c \in \text{Cores}(\mathbf{G}_{out})$).
+* Primitivas de preenchimento (`fill_holes`) e recolorização (`recolor_all`) são filtradas para incluir apenas cores efetivamente presentes no conjunto de saída ($c \in \text{Cores}(G_{out})$).
 
 Essa poda reduz o catálogo ativo de 75 para **3 a 15 primitivas**, viabilizando a busca completa de profundidade 1 em milissegundos e profundidade 2 em menos de um segundo por tarefa.
 
 ### 2.5 Função de Perda e Verificação Determinística
-Dada uma sequência candidata de primitivas $P = (f_1, f_2, \dots, f_d)$, o programa é executado de forma determinística sobre todos os pares de demonstração $\{(I_k, O_k)\}_{k=1}^{K}$. A função de perda é definida por:
+Dado um programa candidato $P$ composto por uma sequência de operadores, ele é testado sobre todos os $K$ pares de exemplos de treino $\{(I_1, O_1), \dots, (I_K, O_K)\}$. A função de avaliação calcula a divergência exata de pixels:
 
-$$\text{Loss}(P) = \sum_{k=1}^{K} \big\lVert P(I_k) - O_k \big\rVert_0 \quad (\text{com } \text{Loss} = \infty \text{ se } \text{shape}(P(I_k)) \ne \text{shape}(O_k))$$
+$$\text{Perda}(P) = \sum_{k=1}^{K} \text{Divergência}(P(I_k), O_k)$$
 
-O programa ótimo $P^*$ é aceito **exclusivamente se $\text{Loss}(P^*) = 0$ para todos os pares de treino**. O programa verificado é então compilado e aplicado à grade de teste oculta:
+* Se as dimensões da grade gerada divergirem das dimensões da grade esperada, a perda é imediatamente infinita ($\text{Perda} = \infty$).
+* Caso contrário, a perda corresponde exatamente à quantidade de pixels divergentes entre o resultado obtido e o resultado esperado.
 
-$$\mathbf{O}_{\text{test}} = P^*(I_{\text{test}})$$
+**Critério de Aceitação Determinístico:**
+$$\text{Critério de Validação:} \quad \text{Perda}(P^*) = 0 \quad (\text{100% de acerto exato em todos os exemplos})$$
+
+Um programa só é aceito se zerar absolutamente todos os erros em todos os exemplos de treino. Em seguida, a solução validada é executada sobre a entrada de teste inédita:
+
+$$\text{Grade de Teste Resolvida} = P^*(I_{\text{teste}})$$
 
 ---
 
