@@ -43,52 +43,16 @@ O T-NSE incorpora formalmente esses três axiomas em sua arquitetura, transpondo
 
 ## 2. Formalização Matemática da Arquitetura (Completeness & Novelty)
 
-O pipeline do T-NSE opera em um fluxo determinístico sequencial composto por três módulos integrados:
+O T-NSE organiza a indução espacial em um pipeline determinístico estruturado em cinco módulos sequenciais:
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                  GRADE DE ENTRADA G                                     |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MÓDULO 1: DECOMPOSIÇÃO TOPOLÓGICA (ARCObjectExtractor)                                 |
-|  * Segmentação multicamada por cor (c ∈ {1..9}, fundo c=0)                              |
-|  * Rotulagem de componentes conexos (4- ou 8-conectividade com fallback BFS NumPy)      |
-|  * Formalização: o_i = ⟨ c_i, M_i, b_i, A_i, c_i ⟩                                      |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MÓDULO 2: GRAFO DE CENAS TOPOLÓGICO - TSG (build_scene_graph)                          |
-|  * Detecção de furos por flood-fill de borda (enclosed_cells)                           |
-|  * Relações tipadas: Adjacência (dist ≤ 1) e Contenção (M_j ⊂ Furo(M_i))                |
-|  * Vetor relativo de centroide: Δc_ij = c_j - c_i                                       |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MÓDULO 3: PODA HEURÍSTICA DE HIPÓTESES (prune_dsl)                                     |
-|  * Análise de deltas entre pares de treino (mudança de forma, escala, paleta)           |
-|  * Redução seletiva do vocabulário da DSL (ex: de 75 para 3-6 primitivas ativas)        |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MÓDULO 4: MOTOR SIMBÓLICO E VERIFICAÇÃO DETERMINÍSTICA (ARCSymbolicEngine)             |
-|  * Enumeração gulosa (menor comprimento primeiro, depth 1 -> depth 2)                   |
-|  * Critério de aceitação: Loss = 0 em TODOS os pares de treino                          |
-|  * Aplicação determinística à grade de teste oculta: O_test = P*(I_test)                |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MÓDULO 5: GERADOR DE SUBMISSÃO KAGGLE OFICIAL (submission.json)                        |
-|  * Busca dinâmica por glob em /kaggle/input/                                            |
-|  * Orçamento de tempo seguro por tarefa (max_time=1.5s, fallback garantido)            |
-|  * Formato oficial ARC-AGI-2 com attempt_1 e attempt_2                                  |
-+-----------------------------------------------------------------------------------------+
-```
+| Estágio do Pipeline | Módulo de Implementação | Operação Formal e Mecanismo Matemático | Representação de Saída |
+|---|---|---|---|
+| **0. Ingestão Bruta** | Grade de Entrada $\mathbf{G}$ | Conversão do JSON em matriz discreta bidimensional de inteiros $\mathbf{G} \in \{0,\dots,9\}^{H \times W}$ | Grade Discreta Bruta |
+| **Estágio 1 · Percepção** | `ARCObjectExtractor` | Segmentação multicamada por cor; rotulagem conexa 4/8-conectividade (OpenCV / BFS) | Conjunto de Entidades $\mathcal{O} = \{o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle\}$ |
+| **Estágio 2 · Topologia** | `build_scene_graph` | Detecção de cavidades por flood-fill de borda (`enclosed_cells`); relações topológicas | Grafo Atribuído $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ com `contains`, `adjacent`, $\Delta\mathbf{c}_{ij}$ |
+| **Estágio 3 · Poda** | `prune_dsl` | Análise de deltas nos pares de treino (preservação dimensional, escala, cores ativas) | Sub-DSL Dinâmica $\mathcal{D}^* \subset \mathcal{D}$ (3 a 15 primitivas ativas) |
+| **Estágio 4 · Síntese** | `ARCSymbolicEngine` | Busca gulosa (profundidades 1–2); verificação estrita $\sum \|P(I_k) - O_k\|_0 = 0$ | Programa Determinístico Verificado $P^*$ |
+| **Estágio 5 · Inferência** | Gerador de Submissão | Execução $P^*(I_{\text{test}})$; geração de `attempt_1` e `attempt_2` em `submission.json` | Submissão Válida Kaggle ARC-AGI-2 |
 
 ### 2.1 Percepção Discreta e Extração de Objetos
 Dada uma grade bidimensional $\mathbf{G} \in \{0, \dots, 9\}^{H \times W}$, o sistema isola o plano de fundo ($c = 0$) e segmenta cada cor foreground $c \in \{1, \dots, 9\}$ em componentes conectados. Cada objeto $o_i$ é rigorosamente modelado pela 5-tupla:

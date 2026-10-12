@@ -43,52 +43,16 @@ T-NSE explicitly bakes these three axioms into its representational state, shrin
 
 ## 2. Mathematical Formalization of the Architecture (Completeness & Novelty)
 
-T-NSE executes an entirely deterministic, five-module pipeline:
+T-NSE organizes spatial induction into an end-to-end deterministic pipeline structured across five sequential modules:
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                    INPUT GRID G                                         |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 1: TOPOLOGICAL PERCEPTION (ARCObjectExtractor)                                  |
-|  * Multilayer color segmentation (c ∈ {1..9}, background c=0)                           |
-|  * Connected component labeling (4- or 8-connectivity with NumPy BFS fallback)          |
-|  * Entity formalization: o_i = ⟨ c_i, M_i, b_i, A_i, c_i ⟩                              |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 2: TOPOLOGICAL SCENE GRAPH - TSG (build_scene_graph)                            |
-|  * Boundary flood-fill cavity detection (enclosed_cells)                                |
-|  * Typed relational edges: Adjacency (dist ≤ 1) and Containment (M_j ⊂ Hole(M_i))       |
-|  * Relative centroid offset vector: Δc_ij = c_j - c_i                                   |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 3: HEURISTIC HYPOTHESIS PRUNER (prune_dsl)                                      |
-|  * Demonstration pair delta analysis (dimension shifts, transposition, scale, palette)  |
-|  * Selective active DSL subspace pruning (reducing 75 down to 3-15 active primitives)   |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 4: SYMBOLIC DSL ENGINE & VERIFICATION (ARCSymbolicEngine)                       |
-|  * Shortest-first exhaustive enumeration (depth 1 -> depth 2)                           |
-|  * Deterministic acceptance criterion: Loss = 0 across ALL training demonstrations     |
-|  * Deterministic application to hidden test input: O_test = P*(I_test)                  |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 5: KAGGLE ARC-AGI-2 SUBMISSION PIPELINE (submission.json)                       |
-|  * Robust glob discovery across arbitrary /kaggle/input/ directory structures           |
-|  * Per-task timeout quota (max_time=1.5s with guaranteed identity fallback)             |
-|  * Official submission formatting with attempt_1 and attempt_2                          |
-+-----------------------------------------------------------------------------------------+
-```
+| Pipeline Stage | Implementation Module | Formal Operation & Mathematical Mechanism | Output Representation |
+|---|---|---|---|
+| **0. Raw Ingestion** | Input Grid $\mathbf{G}$ | Parse raw task JSON into discrete 2D integer lattice $\mathbf{G} \in \{0,\dots,9\}^{H \times W}$ | Raw Discrete Lattice |
+| **Stage 1 · Perception** | `ARCObjectExtractor` | Multilayer color filtering; 4- or 8-connectivity labeling (OpenCV / pure-NumPy BFS) | Entity Set $\mathcal{O} = \{o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle\}$ |
+| **Stage 2 · Topology** | `build_scene_graph` | Boundary flood-fill cavity detection (`enclosed_cells`); typed relation extraction | Attributed Graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ with `contains`, `adjacent`, $\Delta\mathbf{c}_{ij}$ |
+| **Stage 3 · Pruning** | `prune_dsl` | Pairwise training deltas (shape preservation, scale factor, transpositions, active colors) | Filtered Sub-DSL $\mathcal{D}^* \subset \mathcal{D}$ (3 to 15 active primitives) |
+| **Stage 4 · Synthesis** | `ARCSymbolicEngine` | Shortest-first enumerative search (depth 1–2); verification loss $\sum \|P(I_k) - O_k\|_0 = 0$ | Verified Deterministic Program $P^*$ |
+| **Stage 5 · Inference** | Submission Generator | Apply $P^*(I_{\text{test}})$; compile `attempt_1` & `attempt_2` into `/kaggle/working/submission.json` | Scored Kaggle ARC-AGI-2 Submission |
 
 ### 2.1 Discrete Perception and Object Extraction
 Given an input discrete lattice $\mathbf{G} \in \{0, \dots, 9\}^{H \times W}$, background cells ($c = 0$) are segregated, and each foreground color $c \in \{1, \dots, 9\}$ is segmented into connected components. Every detected object $o_i$ is formalized as a 5-tuple:

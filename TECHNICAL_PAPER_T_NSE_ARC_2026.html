@@ -2,111 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Topological Neuro-Symbolic Engine (T-NSE) — Technical Paper</title>
+<title>TECHNICAL_PAPER_T_NSE_ARC_2026</title>
 <style>
-    @media print {
-        @page {
-            margin: 20mm;
-            size: A4;
-        }
-        body {
-            font-size: 10.5pt;
-            line-height: 1.5;
-            color: #000;
-        }
-        h1, h2, h3 {
-            page-break-after: avoid;
-        }
-        pre, blockquote, table {
-            page-break-inside: avoid;
-        }
-    }
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        color: #1f2328;
-        max-width: 900px;
-        margin: 40px auto;
-        padding: 0 25px;
-        line-height: 1.6;
-        background-color: #fff;
-    }
-    h1 {
-        font-size: 24pt;
-        border-bottom: 2px solid #0969da;
-        padding-bottom: 10px;
-        margin-bottom: 8px;
-        color: #0969da;
-        text-align: center;
-    }
-    h2 {
-        font-size: 16pt;
-        border-bottom: 1px solid #d0d7de;
-        padding-bottom: 6px;
-        margin-top: 28px;
-        color: #1f2328;
-    }
-    h3 {
-        font-size: 12.5pt;
-        margin-top: 20px;
-        color: #24292f;
-    }
-    p, li {
-        font-size: 11pt;
-        text-align: justify;
-    }
-    code {
-        background-color: #f6f8fa;
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-        font-size: 9.5pt;
-        color: #cf222e;
-    }
-    pre {
-        background-color: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 6px;
-        padding: 14px;
-        overflow-x: auto;
-    }
-    pre code {
-        background-color: transparent;
-        padding: 0;
-        color: #24292f;
-        font-size: 9pt;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-        font-size: 10.5pt;
-    }
-    th, td {
-        border: 1px solid #d0d7de;
-        padding: 8px 12px;
-        text-align: left;
-    }
-    th {
-        background-color: #f6f8fa;
-        font-weight: 600;
-    }
-    tr:nth-child(even) {
-        background-color: #fbfcfd;
-    }
-    blockquote {
-        border-left: 4px solid #0969da;
-        padding: 8px 16px;
-        color: #57606a;
-        background-color: #f6f8fa;
-        margin: 16px 0;
-        border-radius: 0 4px 4px 0;
-    }
-    hr {
-        border: 0;
-        height: 1px;
-        background: #d0d7de;
-        margin: 28px 0;
-    }
+body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 25px; line-height: 1.6; color: #1f2328; }
+h1 { color: #0969da; text-align: center; border-bottom: 2px solid #0969da; padding-bottom: 10px; }
+h2 { border-bottom: 1px solid #d0d7de; padding-bottom: 6px; margin-top: 28px; color: #1f2328; }
+h3 { color: #24292f; margin-top: 20px; }
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10pt; }
+th, td { border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; }
+th { background-color: #0F3C73; color: white; }
+tr:nth-child(even) { background-color: #f6f8fa; }
+pre { background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 14px; overflow-x: auto; }
+code { font-family: Consolas, monospace; background-color: #f6f8fa; padding: 2px 5px; color: #cf222e; }
+pre code { color: #24292f; background: none; padding: 0; }
 </style>
 </head>
 <body>
@@ -140,50 +48,55 @@ Even for a modest vocabulary of $|\mathcal{D}| = 75$ primitives, evaluating comp
 <p>T-NSE explicitly bakes these three axioms into its representational state, shrinking the search space from raw pixel lattice configurations ($\sim 10^{900}$ states on $30 \times 30$ grids) down to structured object graph morphisms ($\sim 10^3$ verified candidate programs).</p>
 <hr />
 <h2>2. Mathematical Formalization of the Architecture (Completeness &amp; Novelty)</h2>
-<p>T-NSE executes an entirely deterministic, five-module pipeline:</p>
-<pre><code>+-----------------------------------------------------------------------------------------+
-|                                    INPUT GRID G                                         |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 1: TOPOLOGICAL PERCEPTION (ARCObjectExtractor)                                  |
-|  * Multilayer color segmentation (c ∈ {1..9}, background c=0)                           |
-|  * Connected component labeling (4- or 8-connectivity with NumPy BFS fallback)          |
-|  * Entity formalization: o_i = ⟨ c_i, M_i, b_i, A_i, c_i ⟩                              |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 2: TOPOLOGICAL SCENE GRAPH - TSG (build_scene_graph)                            |
-|  * Boundary flood-fill cavity detection (enclosed_cells)                                |
-|  * Typed relational edges: Adjacency (dist ≤ 1) and Containment (M_j ⊂ Hole(M_i))       |
-|  * Relative centroid offset vector: Δc_ij = c_j - c_i                                   |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 3: HEURISTIC HYPOTHESIS PRUNER (prune_dsl)                                      |
-|  * Demonstration pair delta analysis (dimension shifts, transposition, scale, palette)  |
-|  * Selective active DSL subspace pruning (reducing 75 down to 3-15 active primitives)   |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 4: SYMBOLIC DSL ENGINE &amp; VERIFICATION (ARCSymbolicEngine)                       |
-|  * Shortest-first exhaustive enumeration (depth 1 -&gt; depth 2)                           |
-|  * Deterministic acceptance criterion: Loss = 0 across ALL training demonstrations     |
-|  * Deterministic application to hidden test input: O_test = P*(I_test)                  |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-+-----------------------------------------------------------------------------------------+
-|  MODULE 5: KAGGLE ARC-AGI-2 SUBMISSION PIPELINE (submission.json)                       |
-|  * Robust glob discovery across arbitrary /kaggle/input/ directory structures           |
-|  * Per-task timeout quota (max_time=1.5s with guaranteed identity fallback)             |
-|  * Official submission formatting with attempt_1 and attempt_2                          |
-+-----------------------------------------------------------------------------------------+
-</code></pre>
+<p>T-NSE organizes spatial induction into an end-to-end deterministic pipeline structured across five sequential modules:</p>
+<table>
+<thead>
+<tr>
+<th>Pipeline Stage</th>
+<th>Implementation Module</th>
+<th>Formal Operation &amp; Mathematical Mechanism</th>
+<th>Output Representation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0. Raw Ingestion</strong></td>
+<td>Input Grid $\mathbf{G}$</td>
+<td>Parse raw task JSON into discrete 2D integer lattice $\mathbf{G} \in {0,\dots,9}^{H \times W}$</td>
+<td>Raw Discrete Lattice</td>
+</tr>
+<tr>
+<td><strong>Stage 1 · Perception</strong></td>
+<td><code>ARCObjectExtractor</code></td>
+<td>Multilayer color filtering; 4- or 8-connectivity labeling (OpenCV / pure-NumPy BFS)</td>
+<td>Entity Set $\mathcal{O} = {o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle}$</td>
+</tr>
+<tr>
+<td><strong>Stage 2 · Topology</strong></td>
+<td><code>build_scene_graph</code></td>
+<td>Boundary flood-fill cavity detection (<code>enclosed_cells</code>); typed relation extraction</td>
+<td>Attributed Graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ with <code>contains</code>, <code>adjacent</code>, $\Delta\mathbf{c}_{ij}$</td>
+</tr>
+<tr>
+<td><strong>Stage 3 · Pruning</strong></td>
+<td><code>prune_dsl</code></td>
+<td>Pairwise training deltas (shape preservation, scale factor, transpositions, active colors)</td>
+<td>Filtered Sub-DSL $\mathcal{D}^* \subset \mathcal{D}$ (3 to 15 active primitives)</td>
+</tr>
+<tr>
+<td><strong>Stage 4 · Synthesis</strong></td>
+<td><code>ARCSymbolicEngine</code></td>
+<td>Shortest-first enumerative search (depth 1–2); verification loss $\sum |P(I_k) - O_k|_0 = 0$</td>
+<td>Verified Deterministic Program $P^*$</td>
+</tr>
+<tr>
+<td><strong>Stage 5 · Inference</strong></td>
+<td>Submission Generator</td>
+<td>Apply $P^*(I_{\text{test}})$; compile <code>attempt_1</code> &amp; <code>attempt_2</code> into <code>/kaggle/working/submission.json</code></td>
+<td>Scored Kaggle ARC-AGI-2 Submission</td>
+</tr>
+</tbody>
+</table>
 <h3>2.1 Discrete Perception and Object Extraction</h3>
 <p>Given an input discrete lattice $\mathbf{G} \in {0, \dots, 9}^{H \times W}$, background cells ($c = 0$) are segregated, and each foreground color $c \in {1, \dots, 9}$ is segmented into connected components. Every detected object $o_i$ is formalized as a 5-tuple:</p>
 <p>$$o_i = \langle c_i, \mathcal{M}_i, \mathbf{b}_i, A_i, \mathbf{c}_i \rangle$$</p>
